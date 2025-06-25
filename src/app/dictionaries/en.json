@@ -1,0 +1,94 @@
+{
+  "header": {
+    "login": "Login"
+  },
+  "language": "Language",
+  "hero": {
+    "innovative": "🚀 Ethiopia's Most Innovative Job Platform",
+    "title": "Find Your Dream Job With Us",
+    "description": "Discover a wide range of job opportunities and take the next step in your career. Connect with top employers across Ethiopia and unlock your potential.",
+    "cta": {
+      "getStarted": "Get Started Today",
+      "learnMore": "Learn More"
+    },
+    "demo": {
+      "badge": "Live",
+      "title": "Quick Job Search",
+      "searchPlaceholder": "Software Developer",
+      "locationPlaceholder": "Addis Ababa",
+      "jobs": [
+        {
+          "title": "Senior Frontend Developer",
+          "company": "TechCorp ET",
+          "salary": "25,000 ETB"
+        },
+        {
+          "title": "Full Stack Engineer",
+          "company": "StartupHub",
+          "salary": "30,000 ETB"
+        },
+        {
+          "title": "UI/UX Designer",
+          "company": "DesignStudio",
+          "salary": "20,000 ETB"
+        }
+      ],
+      "perMonth": "per month"
+    }
+  },
+  "features": {
+    "title": "Why Choose Econnect",
+    "heading": "Get Employed Faster",
+    "description": "Everything you need to get a job in Ethiopia. Our platform is designed to connect talent with opportunity.",
+    "list": [
+      {
+        "title": "Mobile Friendly",
+        "description": "View from any device, anywhere, anytime. Our platform is built to be responsive and accessible."
+      },
+      {
+        "title": "Performance",
+        "description": "Hosted locally in Ethiopia, our platform is built to be fast and reliable for all users."
+      },
+      {
+        "title": "Security",
+        "description": "Your data is safe with us. We use the latest security protocols to keep your information secure."
+      },
+      {
+        "title": "Talk to Recruiters",
+        "description": "Chat with recruiters and get the latest job updates and industry insights from company professionals."
+      }
+    ]
+  },
+  "stats": {
+    "list": [
+      {
+        "number": "98%",
+        "label": "Success Rate"
+      },
+      {
+        "number": "24/7",
+        "label": "Support Available"
+      },
+      {
+        "number": "500+",
+        "label": "Partner Companies"
+      },
+      {
+        "number": "4.9★",
+        "label": "User Rating"
+      }
+    ]
+  },
+  "cta": {
+    "heading": "Ready to Start Your Career Journey?",
+    "description": "Join thousands of professionals who have found their dream jobs through Econnect. Your next opportunity is just a click away.",
+    "buttons": {
+      "signUp": "Sign Up Now",
+      "browseJobs": "Browse Jobs"
+    }
+  },
+  "footer": {
+    "description": "Connecting talent with opportunity across Ethiopia. Your career journey starts here.",
+    "copyright": "© 2024 Econnect. All rights reserved. Made with ❤️ in Ethiopia."
+  }
+}
