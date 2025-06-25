@@ -19,6 +19,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { getDictionary } from "./dictionaries"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import LandingJobListings from "@/components/LandingJobListings"
 
 type Dictionary = {
   header: {
@@ -185,49 +186,8 @@ export default async function LandingPage({ params }: { params: Promise<{ lang: 
               </div> */}
             </div>
 
-            <div className="relative">
-              <div className="relative z-10 bg-white rounded-2xl shadow-2xl p-8 border border-gray-100">
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-black">{dict.hero.demo.title}</h3>
-                    <Badge className="bg-green-100 text-green-700">{dict.hero.demo.badge}</Badge>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                      <Search className="h-5 w-5 text-gray-400" />
-                      <span className="text-gray-600">{dict.hero.demo.searchPlaceholder}</span>
-                    </div>
-                    <div className="flex items-center space-x-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                      <Globe className="h-5 w-5 text-blue-600" />
-                      <span className="text-blue-700 font-medium">{dict.hero.demo.locationPlaceholder}</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    {dict.hero.demo.jobs.map((job, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-100"
-                      >
-                        <div>
-                          <div className="font-medium text-gray-900">{job.title}</div>
-                          <div className="text-sm text-gray-600">{job.company}</div>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-semibold text-green-600">{job.salary}</div>
-                          <div className="text-xs text-gray-500">{dict.hero.demo.perMonth}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Decorative elements */}
-              <div className="absolute -top-4 -right-4 w-24 h-24 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full opacity-20 blur-xl"></div>
-              <div className="absolute -bottom-4 -left-4 w-32 h-32 bg-gradient-to-r from-teal-400 to-blue-400 rounded-full opacity-20 blur-xl"></div>
-            </div>
+            <LandingJobListings />
+            
           </div>
         </div>
       </section>
@@ -279,7 +239,7 @@ export default async function LandingPage({ params }: { params: Promise<{ lang: 
       </section>
 
       {/* Stats Section */}
-      <section className="py-20 bg-gradient-to-r from-blue-600 via-purple-600 to-teal-600">
+      {/* <section className="py-20 bg-gradient-to-r from-blue-600 via-purple-600 to-teal-600">
         <div className="container mx-auto px-4">
           <div className="grid md:grid-cols-4 gap-8 text-center text-white">
             {[
@@ -296,7 +256,7 @@ export default async function LandingPage({ params }: { params: Promise<{ lang: 
             ))}
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* CTA Section */}
       <section className="py-20 bg-gray-50">
