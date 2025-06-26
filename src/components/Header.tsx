@@ -55,7 +55,7 @@ export default async function Header({ lang }: HeaderProps) {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Link href="/login">
+            <Link href={`/${lang}/auth/login`}>
               <Button variant="outline" className="bg-white text-blue-600 cursor-pointer border-blue-200 hover:bg-blue-50">
                 {dict?.header?.login}
               </Button>

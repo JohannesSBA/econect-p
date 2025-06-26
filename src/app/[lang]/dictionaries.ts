@@ -1,4 +1,6 @@
-// app/[lang]/dictionaries.ts
+import 'server-only' // Ensures this file is server-only in Next.js
+
+const cache = new Map<string, any>()
 
 const dictionaries = {
   en: () => import('../dictionaries/en.json').then((module) => module.default),
@@ -7,5 +9,11 @@ const dictionaries = {
 }
 
 export const getDictionary = async (locale: 'en' | 'am' | 'om') => {
-  return dictionaries[locale]?.() || dictionaries['en']()
+  if (cache.has(locale)) {
+    return cache.get(locale)
+  }
+
+  const dict = await (dictionaries[locale]?.() || dictionaries['en']())
+  cache.set(locale, dict)
+  return dict
 }
