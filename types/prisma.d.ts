@@ -8,6 +8,7 @@ export interface CreateUserInput {
 }
 
 export interface JobListing {
+  id: string
   title: string
   description: string
   company: string

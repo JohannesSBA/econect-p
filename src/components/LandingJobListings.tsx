@@ -5,13 +5,17 @@ import { useEffect, useState } from 'react';
 import { Globe, Search } from 'lucide-react';
 import { JobListing } from '../../types/prisma';
 import { Input } from './ui/input';
+import Link from 'next/link';
 
+interface LandingJobListingsProps {
+    lang: string;
+}
 
-
-export default function LandingJobListings() {
+export default function LandingJobListings({ lang }: LandingJobListingsProps) {
   const [jobs, setJobs] = useState<JobListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     const fetchJobs = async () => {
@@ -28,6 +32,17 @@ export default function LandingJobListings() {
 
     fetchJobs();
   }, []);
+
+  useEffect(() => {
+    setLoading(true);
+    const fetchQueryJobs = async () => {
+      const { data } = await axios.get(`/api/jobs/landing?search=${search}`);
+      setJobs(data);
+    };
+
+    fetchQueryJobs()
+    setLoading(false);
+  }, [search]);
 
   if (loading) {
     return (
@@ -58,7 +73,7 @@ export default function LandingJobListings() {
         <div className="space-y-4">
           <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
             <Search className="h-5 w-5 text-gray-400" />
-            <Input placeholder="Search job titles or keywords" />
+            <Input placeholder="Search job titles or keywords" onChange={(e) => setSearch(e.target.value)}/>
           </div>
           <div className="flex items-center space-x-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
             <Globe className="h-5 w-5 text-blue-600" />
@@ -67,10 +82,11 @@ export default function LandingJobListings() {
         </div>
 
         <div className="space-y-3">
-          {jobs.map((job) => (
-            <div
+          {jobs.length > 0 ? jobs.map((job) => (
+            <Link
               key={job.id}
-              className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-100 hover:shadow-md transition-shadow"
+              href={`/${lang}/jobs/${job.id}`}
+              className="flex items-center cursor-pointer justify-between p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-100 hover:shadow-md transition-shadow"
             >
               <div>
                 <div className="font-medium text-gray-900">{job.title}</div>
@@ -80,8 +96,12 @@ export default function LandingJobListings() {
                 <div className="font-semibold text-green-600">{job.salary}</div>
                 <div className="text-xs text-gray-500">per month</div>
               </div>
+            </Link>
+          )) : (
+            <div className="text-center py-8 text-gray-600">
+              No jobs found
             </div>
-          ))}
+          )}
         </div>
       </div>
     </div>

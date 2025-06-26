@@ -20,61 +20,9 @@ import Image from "next/image"
 import { getDictionary } from "./dictionaries"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import LandingJobListings from "@/components/LandingJobListings"
+import { Dictionary } from "@/lib/utils"
+import Header from "@/components/Header"
 
-type Dictionary = {
-  header: {
-    login: string
-  }
-  language: string
-  hero: {
-    innovative: string
-    title: string
-    description: string
-    cta: {
-      getStarted: string
-      learnMore: string
-    }
-    demo: {
-      badge: string
-      title: string
-      searchPlaceholder: string
-      locationPlaceholder: string
-      jobs: Array<{
-        title: string
-        company: string
-        salary: string
-      }>
-      perMonth: string
-    }
-  }
-  features: {
-    title: string
-    heading: string
-    description: string
-    list: Array<{
-      title: string
-      description: string
-    }>
-  }
-  stats: {
-    list: Array<{
-      number: string
-      label: string
-    }>
-  }
-  cta: {
-    heading: string
-    description: string
-    buttons: {
-      signUp: string
-      browseJobs: string
-    }
-  }
-  footer: {
-    description: string
-    copyright: string
-  }
-}
 
 
 export default async function LandingPage({ params }: { params: Promise<{ lang: 'en' | 'am' | 'om' }> }) {
@@ -85,56 +33,8 @@ export default async function LandingPage({ params }: { params: Promise<{ lang: 
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
-      {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-              <Image src="/icon1.png" alt="Econnect" width={32} height={32} />
-            </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Econnect
-            </span>
-            
-          </div>
-         
-          
-          <div className="flex items-center space-x-4">
-             <DropdownMenu>
-            <DropdownMenuTrigger className="p-3 text-black text-xs font-bold hover:bg-gray-100 bg-white border border-gray-200 rounded-md">
-              {dict.language + ": " + lang}
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="bg-white text-black">
-              <DropdownMenuItem><Link href="/en" className="w-full justify-start">
-              <Button variant="default" className="px-3 hover:bg-gray-100 w-full text-start" aria-label="Amharic">
-                EN
-              </Button>
-            </Link></DropdownMenuItem>
-
-              <DropdownMenuItem><Link href="/am" className="w-full justify-start">
-              <Button variant="default" className="px-3 hover:bg-gray-100 w-full text-start" aria-label="Amharic">
-                AM
-              </Button>
-            </Link></DropdownMenuItem>
-              <DropdownMenuItem><Link href="/om" className="w-full justify-start">
-              <Button variant="default" className="px-3 hover:bg-gray-100 w-full text-start" aria-label="Oromo">
-                OM
-              </Button>
-            </Link></DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-            
-            
-            
-            <Link href="/login">
-              <Button variant="outline" className="bg-white text-blue-600 cursor-pointer border-blue-200 hover:bg-blue-50">
-                {dict.header.login}
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </header>
-
+      
+      <Header lang={lang} />
       {/* Hero Section */}
       <section className="relative overflow-hidden py-20 lg:py-32">
         <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 via-purple-600/5 to-teal-600/10"></div>
@@ -186,7 +86,7 @@ export default async function LandingPage({ params }: { params: Promise<{ lang: 
               </div> */}
             </div>
 
-            <LandingJobListings />
+            <LandingJobListings lang={lang} />
             
           </div>
         </div>
