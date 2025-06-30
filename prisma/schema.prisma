@@ -45,6 +45,16 @@ model User {
   jobListings JobListing[]      @relation("EmployerJobs")
   profile     JobSeekerProfile? @relation("SeekerProfile")
   applications JobApplication[] @relation("UserApplications")
+  
+  //Friends
+  friends       User[]       @relation("friends")
+  sentFriendRequest    User[]  @relation("sentFriendRequest")
+  pendingFriendRequest User[]  @relation("sentFriendRequest")
+
+  //Chat
+  messagesSent         Message[]    @relation("messagesSent")
+  messagesReceived     Message[]    @relation("messagesReceived")
+  messagesRead         Message[]    @relation("messagesRead")
 
   sessions      Session[]
 }
