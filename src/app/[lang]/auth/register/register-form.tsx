@@ -91,7 +91,7 @@ export default function RegisterForm({ dict, lang }: RegisterFormProps) {
         // now include the rest of formData (password, name, etc)
         ...formData,
       });
-      router.push(`/${lang}/welcome`);
+      router.push(`/${lang}/auth/login`);
     } catch (err) {
       console.error(err);
       // show “wrong code” error

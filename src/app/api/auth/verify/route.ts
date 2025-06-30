@@ -34,6 +34,21 @@ export async function POST(req: NextRequest) {
       password:    hashed,
     },
   })
+  const jobSeeker = await prisma.jobSeekerProfile.create({
+    data: {
+      bio: '',
+      jobSeeker: {
+        connect: {
+          id: user.id,
+        },
+      },
+      education: '',
+      experience: '',
+      skills: {
+        create: [],
+      },
+    },
+  })
 
   // 4) Clear the cookie & return success
   const clearCookie = `econnect_otp=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; Secure; SameSite=Strict`
