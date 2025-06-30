@@ -1,3 +1,4 @@
+"use client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -5,12 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import {
-  Home,
-  MessageCircle,
   Briefcase,
-  Link2,
-  Search,
-  Bell,
   Users,
   UserPlus,
   Clock,
@@ -22,98 +18,21 @@ import {
   ChevronRight,
 } from "lucide-react"
 import Link from "next/link"
+import Header from "../components/Header"
+import { useParams } from "next/navigation"
 
 export default function DashboardPage() {
+    const {lang} = useParams()
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">E</span>
-              </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Econnect
-              </span>
-              <Badge variant="secondary" className="ml-2 text-xs">
-                Ethiopia
-              </Badge>
-            </div>
-
-            {/* Navigation */}
-            <nav className="hidden md:flex items-center space-x-8">
-              <Link
-                href="/dashboard"
-                className="flex flex-col items-center space-y-1 text-blue-600 border-b-2 border-blue-600 pb-4"
-              >
-                <Home className="h-5 w-5" />
-                <span className="text-sm font-medium">Dashboard</span>
-              </Link>
-              <Link
-                href="/messaging"
-                className="flex flex-col items-center space-y-1 text-gray-600 hover:text-blue-600 pb-4"
-              >
-                <div className="relative">
-                  <MessageCircle className="h-5 w-5" />
-                  <Badge className="absolute -top-2 -right-2 h-4 w-4 p-0 bg-blue-600 text-white text-xs flex items-center justify-center">
-                    1
-                  </Badge>
-                </div>
-                <span className="text-sm">Messaging</span>
-              </Link>
-              <Link
-                href="/listings"
-                className="flex flex-col items-center space-y-1 text-gray-600 hover:text-blue-600 pb-4"
-              >
-                <Briefcase className="h-5 w-5" />
-                <span className="text-sm">Listings</span>
-              </Link>
-              <Link
-                href="/connects"
-                className="flex flex-col items-center space-y-1 text-gray-600 hover:text-blue-600 pb-4"
-              >
-                <Link2 className="h-5 w-5" />
-                <span className="text-sm">Connects</span>
-              </Link>
-            </nav>
-
-            {/* Search and Profile */}
-            <div className="flex items-center space-x-4">
-              <div className="relative hidden md:block">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search"
-                  className="pl-10 w-64 bg-gray-100 border-0 focus:bg-white focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div className="relative">
-                <Bell className="h-5 w-5 text-gray-600" />
-                <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 bg-blue-600 text-white text-xs flex items-center justify-center">
-                  9
-                </Badge>
-              </div>
-              <div className="flex items-center space-x-3">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src="/placeholder.svg?height=32&width=32" />
-                  <AvatarFallback>JB</AvatarFallback>
-                </Avatar>
-                <div className="hidden md:block">
-                  <div className="text-sm font-medium text-blue-600">Johannes Bekele</div>
-                  <div className="text-xs text-gray-500">johannes@econnectpilot.com</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
+      <Header lang={lang as string} />
 
       <div className="container mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Left Sidebar */}
-          <div className="lg:col-span-1 sticky top-20">
+          <div className="lg:col-span-1 md:sticky top-20 self-start">
             <Card className="bg-white shadow-sm">
               <CardHeader className="pb-4">
                 <h2 className="text-lg font-semibold text-gray-900">Manage Connections</h2>
@@ -337,11 +256,96 @@ export default function DashboardPage() {
                   </div>
                 </CardContent>
               </Card>
+
+              <Card className="bg-white shadow-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-start space-x-3 mb-4">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src="/placeholder.svg?height=40&width=40" />
+                      <AvatarFallback className="bg-gradient-to-r from-orange-500 to-red-500 text-white">
+                        FU
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2">
+                        <h3 className="font-semibold text-gray-900">Fordham University</h3>
+                        <Badge variant="secondary" className="text-xs">
+                          University
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-gray-500">2/4/2025</p>
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <p className="text-gray-800 mb-2">hi there</p>
+                    <p className="text-gray-800">just using this as a test</p>
+                  </div>
+
+                  <div className="flex items-center space-x-6">
+                    <button className="flex items-center space-x-2 text-gray-500 hover:text-red-500 transition-colors">
+                      <Heart className="h-5 w-5" />
+                      <span className="text-sm">Like</span>
+                    </button>
+                    <button className="flex items-center space-x-2 text-gray-500 hover:text-blue-500 transition-colors">
+                      <MessageSquare className="h-5 w-5" />
+                      <span className="text-sm">Comment</span>
+                    </button>
+                    <button className="flex items-center space-x-2 text-gray-500 hover:text-green-500 transition-colors">
+                      <Share2 className="h-5 w-5" />
+                      <span className="text-sm">Share</span>
+                    </button>
+                  </div>
+                </CardContent>
+              </Card>
+
+
+              <Card className="bg-white shadow-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-start space-x-3 mb-4">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src="/placeholder.svg?height=40&width=40" />
+                      <AvatarFallback className="bg-gradient-to-r from-orange-500 to-red-500 text-white">
+                        FU
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2">
+                        <h3 className="font-semibold text-gray-900">Fordham University</h3>
+                        <Badge variant="secondary" className="text-xs">
+                          University
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-gray-500">2/4/2025</p>
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <p className="text-gray-800 mb-2">hi there</p>
+                    <p className="text-gray-800">just using this as a test</p>
+                  </div>
+
+                  <div className="flex items-center space-x-6">
+                    <button className="flex items-center space-x-2 text-gray-500 hover:text-red-500 transition-colors">
+                      <Heart className="h-5 w-5" />
+                      <span className="text-sm">Like</span>
+                    </button>
+                    <button className="flex items-center space-x-2 text-gray-500 hover:text-blue-500 transition-colors">
+                      <MessageSquare className="h-5 w-5" />
+                      <span className="text-sm">Comment</span>
+                    </button>
+                    <button className="flex items-center space-x-2 text-gray-500 hover:text-green-500 transition-colors">
+                      <Share2 className="h-5 w-5" />
+                      <span className="text-sm">Share</span>
+                    </button>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
 
           {/* Right Sidebar */}
-          <div className="lg:col-span-1 space-y-6 sticky top-20">
+          <div className="lg:col-span-1 space-y-6 md:sticky top-20 self-start">
             {/* Profile Card */}
             <Card className="bg-white shadow-sm">
               <CardContent className="p-4">

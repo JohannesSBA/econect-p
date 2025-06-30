@@ -35,13 +35,14 @@ export default async function RootLayout({
 
 
   return (
-    <html lang={params.lang}>
-      <Toaster position="top-center" richColors />
        <ErrorBoundary fallback={<NotFound />}>
+        <Toaster position="top-center" richColors />
+    <html lang={params.lang}>
         <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
           {children}
         </body>
-      </ErrorBoundary>
     </html>
+      </ErrorBoundary>
+
   );
 }
