@@ -6,7 +6,7 @@ import RegisterForm from './register-form';
 
 
 
-export default async function RegisterPage({ params }: { params: Promise<{ lang: 'en' | 'am' | 'om' }> }) {
+export default async function RegisterPage({ params }: { params: Promise<{ lang: 'en' | 'am' }> }) {
   // Fetch the localized dictionary
     const { lang } = await params
   

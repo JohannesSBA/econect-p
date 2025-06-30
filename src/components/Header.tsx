@@ -5,13 +5,15 @@ import Image from "next/image";
 import { getDictionary } from "@/app/[lang]/dictionaries";
 import { Dictionary } from "@/lib/utils";
 
+
+
 interface HeaderProps {
   lang: string;
 }
 
 export default async function Header({ lang }: HeaderProps) {
+  const dict = await getDictionary(lang as 'en' | 'am' ) as Dictionary
 
-  const dict = await getDictionary(lang as 'en' | 'am' | 'om') as Dictionary
     
      return(
         <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">

@@ -5,14 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Link from 'next/link';
 import axios from 'axios';
 import {
-  ArrowLeft,
   Mail,
   Lock,
   User,
@@ -22,18 +20,24 @@ import {
   Chrome,
   Eye,
   EyeOff,
+  Loader2,
 } from 'lucide-react';
 import { Dictionary } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
 
 interface RegisterFormProps {
   dict: Dictionary['register'];
-  lang: 'en' | 'am' | 'om';
+  lang: 'en' | 'am';
 }
 
 
 export default function RegisterForm({ dict, lang }: RegisterFormProps) {
+    const [step, setStep] = useState<'register' | 'verify'>('register');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [otp, setOtp] = useState('');
+  const router = useRouter();
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -57,18 +61,42 @@ export default function RegisterForm({ dict, lang }: RegisterFormProps) {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleCheckboxChange = (name: string, checked: boolean) => {
-    setFormData(prev => ({ ...prev, [name]: checked }));
-  };
+  // const handleCheckboxChange = (name: string, checked: boolean) => {
+  //   setFormData(prev => ({ ...prev, [name]: checked }));
+  // };
 
   const handleSubmit = async (e: React.FormEvent) => {
+    setLoading(true);
     e.preventDefault();
     try {
-      const response = await axios.post('/api/register', formData);
+      setLoading(true);
+      const response = await axios.post('/api/auth/register', formData);
       console.log('Success:', response.data);
       // Optionally redirect or show success message
     } catch (error) {
       console.error('Registration error:', error);
+    } finally {
+      setLoading(false);
+      setStep('verify');
+    }
+  };
+
+    const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await axios.post('/api/auth/verify', {
+        formData,
+        code: otp,
+        // now include the rest of formData (password, name, etc)
+        ...formData,
+      });
+      router.push(`/${lang}/welcome`);
+    } catch (err) {
+      console.error(err);
+      // show “wrong code” error
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -107,7 +135,8 @@ export default function RegisterForm({ dict, lang }: RegisterFormProps) {
             </div>
 
             {/* Form Fields */}
-            <form onSubmit={handleSubmit} className="space-y-4">
+           {step === 'register' ? (
+             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Name Fields */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -285,9 +314,29 @@ export default function RegisterForm({ dict, lang }: RegisterFormProps) {
 
               {/* Submit Button */}
               <Button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-6 text-lg font-medium">
-                {dict.submit}
+                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : dict.submit}
               </Button>
             </form>
+           ) : (
+           <form onSubmit={handleVerifyOtp} className="space-y-4">
+          <Label htmlFor="otp">Enter the 6-digit code</Label>
+          <Input
+            id="otp" name="otp" type="text"
+            value={otp}
+            onChange={e => setOtp(e.target.value.replace(/\D/, ''))}
+            maxLength={6}
+            placeholder="123456"
+            className="tracking-widest text-center text-lg"
+            required
+          />
+          <Button className='w-full' type="submit" disabled={loading || otp.length < 6}>
+            {loading ? 'Verifying…' : 'Verify'}
+          </Button>
+          <Button className='w-full' type="button" onClick={() => setStep('register')}>
+            Back
+          </Button>
+        </form>
+           )}
 
             {/* Sign In Link */}
             <div className="text-center pt-4">

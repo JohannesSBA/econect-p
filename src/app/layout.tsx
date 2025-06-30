@@ -1,12 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import Link from "next/link"
-import Image from "next/image"
-import { getDictionary } from "./[lang]/dictionaries";
-import { Dictionary } from "@/lib/utils";
+import { Toaster } from "sonner";
+import { ErrorBoundary } from "react-error-boundary";
+import NotFound from "./not-found";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -24,7 +21,7 @@ export const metadata: Metadata = {
 };
 
 export async function generateStaticParams() {
-  return [{ lang: 'en' }, { lang: 'am' }, { lang: 'om' }]
+  return [{ lang: 'en' }, { lang: 'am' }]
 }
 
 export default async function RootLayout({
@@ -32,17 +29,19 @@ export default async function RootLayout({
   params,
 }: Readonly<{
   children: React.ReactNode;
-  params: { lang: 'en' | 'am' | 'om' }; // Remove Promise wrapper
+  params: { lang: 'en' | 'am' }; // Remove Promise wrapper
 }>) {
 
 
 
   return (
     <html lang={params.lang}>
-     
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        {children}
-      </body>
+      <Toaster position="top-center" richColors />
+       <ErrorBoundary fallback={<NotFound />}>
+        <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+          {children}
+        </body>
+      </ErrorBoundary>
     </html>
   );
 }

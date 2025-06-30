@@ -7,25 +7,16 @@ import {
   Zap,
   Shield,
   MessageCircle,
-  Search,
-  Users,
-  TrendingUp,
-  Star,
   ArrowRight,
-  Globe,
-  Clock,
 } from "lucide-react"
-import Link from "next/link"
-import Image from "next/image"
 import { getDictionary } from "./dictionaries"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import LandingJobListings from "@/components/LandingJobListings"
 import { Dictionary } from "@/lib/utils"
 import Header from "@/components/Header"
 
 
 
-export default async function LandingPage({ params }: { params: Promise<{ lang: 'en' | 'am' | 'om' }> }) {
+export default async function LandingPage({ params }: { params: Promise<{ lang: 'en' | 'am' }> }) {
 
   const { lang } = await params
   

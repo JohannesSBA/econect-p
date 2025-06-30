@@ -1,14 +1,13 @@
 "use client"
 import { JobListing } from "@/generated/prisma";
-import { useEffect, useState, use, Suspense } from "react";
+import { useEffect, useState, Suspense } from "react";
 import axios from "axios";
-import Header from "@/components/Header";
 import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge, Building2, Calendar, Clock, DollarSign, Link, MapPin, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
-
+import { useSession } from "next-auth/react";
 type JobPageProps = {
     id: string;
 }
@@ -21,6 +20,12 @@ export default function JobPage({id}: JobPageProps) {
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [hasApplied, setHasApplied] = useState(false)
+
+  const { data: session } = useSession();
+  if (session) {
+    setIsLoggedIn(true)
+    setHasApplied(true)
+  }
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -61,6 +66,7 @@ export default function JobPage({id}: JobPageProps) {
   }
 
     function handleApply(event: React.MouseEvent<HTMLButtonElement>): void {
+      event.preventDefault();
         throw new Error("Function not implemented.");
     }
 
@@ -173,7 +179,7 @@ export default function JobPage({id}: JobPageProps) {
                     {hasApplied ? (
                       <div className="text-center py-4">
                         <div className="text-green-600 font-medium mb-2">Application Submitted!</div>
-                        <p className="text-sm text-gray-600">We'll review your application and get back to you soon.</p>
+                        <p className="text-sm text-gray-600">We&apos;ll review your application and get back to you soon.</p>
                       </div>
                     ) : (
                       <Button onClick={handleApply} className="w-full" size="lg" disabled={job.status !== "OPEN"}>
@@ -199,7 +205,7 @@ export default function JobPage({id}: JobPageProps) {
 
                 <div className="flex items-center justify-center gap-1 text-sm text-gray-500">
                   <Users className="w-4 h-4" />
-                  <span>{job.applications.length} applications</span>
+                  {/* <span>{job.} applications</span> */}
                 </div>
               </CardContent>
             </Card>

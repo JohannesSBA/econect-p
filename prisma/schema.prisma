@@ -37,6 +37,7 @@ model User {
   phone       String            @unique
   email       String            @unique
   language    String            @default("en")
+  password    String?
   role        UserRole
   createdAt   DateTime          @default(now())
 
@@ -44,6 +45,19 @@ model User {
   jobListings JobListing[]      @relation("EmployerJobs")
   profile     JobSeekerProfile? @relation("SeekerProfile")
   applications JobApplication[] @relation("UserApplications")
+
+  sessions      Session[]
+}
+
+model PendingUser {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  phone     String
+  firstName String
+  lastName  String
+  password  String
+  otp       String
+  createdAt DateTime @default(now())
 }
 
 model JobListing {
@@ -109,3 +123,20 @@ model JobApplication {
 
   @@unique([userId, jobId]) // Prevent duplicate applications
 }
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique@map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+  user         User     @relation(fields:[userId], references:[id], onDelete: Cascade)
+  }
+
+model VerificationToken {
+  id         Int      @id @default(autoincrement())
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  }

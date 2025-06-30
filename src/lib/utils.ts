@@ -1,8 +1,18 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import bcrypt from "bcryptjs";
+
+
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
+}
+
+
+export default async function hashPassword(unHashPass: string) {
+    return await bcrypt.hash(unHashPass, 10).then(function (hash: string) {
+        return hash;
+    });
 }
 
 export type Dictionary = {

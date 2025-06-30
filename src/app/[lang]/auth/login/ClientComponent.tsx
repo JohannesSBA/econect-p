@@ -1,14 +1,17 @@
 "use client"
-import { useState } from "react"
+import { FormEvent, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
-import { Mail, Lock, Eye, Chrome, Phone } from "lucide-react"
+import { Mail, Lock, Eye, Chrome, Phone, Loader2 } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
 import { Dictionary } from '@/lib/utils'; // Update with actual type
+import { signIn } from "next-auth/react"
+import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 
 interface LoginFormProps {
   dict: Dictionary['login'];
@@ -17,7 +20,37 @@ interface LoginFormProps {
 
 export function LoginForm({ dict, lang }: LoginFormProps) {
   const [loginMethod, setLoginMethod] = useState<"email" | "phone">("email")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const router = useRouter()
+    
+  async function loginWithCredentials(e: FormEvent<HTMLFormElement>) {
+    setLoading(true);
+    e.preventDefault();
 
+    const res = await signIn("credentials", {
+      email,
+      password,
+      callbackUrl: process.env.CALLBACK_URL,
+      redirect: false,
+    });
+    setLoading(false);
+    if (!res?.ok) {
+      toast.error(res?.error);
+      setError(res?.error as string);
+      console.log(res?.error);
+    }
+    if (res?.ok) {
+      router.push(`/${lang}/dashboard`);
+    }
+  }
+
+  if (error) {
+    toast.error(error);
+  }
+  
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-80px)] p-4">
       {/* Rest of the login form UI from original component */}
@@ -91,12 +124,14 @@ export function LoginForm({ dict, lang }: LoginFormProps) {
                     placeholder={loginMethod === "email" ? dict.emailPlaceholder : dict.phonePlaceholder}
                     className="pl-10 py-6 bg-white border-gray-200 focus:border-blue-500 focus:ring-blue-500"
                     required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                   />
                 </div>
               </div>
             </div>
 
-            <form className="space-y-4">
+            <form onSubmit={loginWithCredentials} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="password">{dict.password}</Label>
                 <div className="relative">
@@ -107,6 +142,8 @@ export function LoginForm({ dict, lang }: LoginFormProps) {
                     placeholder={dict.passwordPlaceholder}
                     className="pl-10 pr-10 py-6 bg-white border-gray-200 focus:border-blue-500 focus:ring-blue-500"
                     required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                   />
                   <button type="button" className="absolute right-3 top-3 text-gray-400 hover:text-gray-600">
                     <Eye className="h-5 w-5" />
@@ -130,7 +167,7 @@ export function LoginForm({ dict, lang }: LoginFormProps) {
                 type="submit"
                 className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-6 text-lg font-medium"
               >
-                {dict.signIn}
+                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : dict.signIn}
               </Button>
             </form>
 

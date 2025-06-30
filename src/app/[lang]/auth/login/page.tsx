@@ -5,10 +5,10 @@ import { Dictionary } from '@/lib/utils';
 import { getDictionary } from '@/app/[lang]/dictionaries';
 import { LoginForm } from './ClientComponent';
 
-export default async function LoginPage({ params }: { params: Promise<{ lang: 'en' | 'am' | 'om' }> }) {
+export default async function LoginPage({ params }: { params: Promise<{ lang: 'en' | 'am' }> }) {
   const { lang } = await params
 
-  const dict = await getDictionary(lang as 'en' | 'am' | 'om') as Dictionary
+  const dict = await getDictionary(lang as 'en' | 'am' ) as Dictionary
 
 
   return (
