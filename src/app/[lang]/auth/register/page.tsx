@@ -3,8 +3,6 @@ import Header from '@/components/Header';
 import { getDictionary } from '@/app/[lang]/dictionaries';
 import { Dictionary } from '@/lib/utils';
 import RegisterForm from './register-form';
-import { getToken } from 'next-auth/jwt'
-import { authOptions } from '@/app/api/auth/[...nextauth]/options';
 
 
 

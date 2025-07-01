@@ -1,6 +1,6 @@
 import { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
-import prisma from "@/app/lib/prisma"
+import prisma from "@/lib/prisma"
 import { compare } from "bcryptjs"
 import { User } from "@/generated/prisma"
 
@@ -47,11 +47,14 @@ export const authOptions: NextAuthOptions = {
       return token
     },
     async session({ session, token }) {
-      session.user = {
-        ...session.user,
-        id: token.id as string,
-        role: token.role as string
-      } as { id: string; role: string; } & typeof session.user
+      // Check if session.user exists before accessing it
+      if (session.user) {
+        session.user = {
+          ...session.user,
+          id: token.id as string,
+          role: token.role as string
+        } as { id: string; role: string; } & typeof session.user
+      }
       return session
     },
   },

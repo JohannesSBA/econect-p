@@ -46,3 +46,25 @@ export interface CreateJobApplicationInput {
   jobSeekerId: string
   status: 'APPLIED' | 'VIEWED' | 'INTERVIEWED' | 'HIRED' | 'REJECTED'
 }
+
+export interface User {
+        id:           string,
+      name:         string,
+      email:        string,
+      phone:        string,
+      role:         UserRole,
+      createdAt:    Date,
+      applications: JobApplication[],
+      friendOf:     User[],
+      jobListings:  JobListing[],
+      messagesRead: boolean,
+      language:     string,
+      friends:      User[],
+      messagesReceived: boolean,
+      messagesSent: boolean,
+      password:     string,
+      pendingFriendRequest: boolean,
+      profile:      Profile,
+      sentFriendRequest: boolean,
+      sessions:     Session[],
+}

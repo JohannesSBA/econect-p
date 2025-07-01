@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { Dictionary } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 interface RegisterFormProps {
   dict: Dictionary['register'];
@@ -74,6 +75,7 @@ export default function RegisterForm({ dict, lang }: RegisterFormProps) {
       console.log('Success:', response.data);
       // Optionally redirect or show success message
     } catch (error) {
+      toast.error(`${error}`);
       console.error('Registration error:', error);
     } finally {
       setLoading(false);

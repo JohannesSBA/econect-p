@@ -1,9 +1,10 @@
 // /app/api/auth/register/route.ts
 import { NextResponse } from 'next/server'
-import prisma from '@/app/lib/prisma'
+import prisma from '@/lib/prisma'
 import { Resend } from 'resend'
 
 export async function POST(req: Request) {
+  console.log('register')
   const { email, phone } = await req.json()
 
   // 1) Prevent duplicates

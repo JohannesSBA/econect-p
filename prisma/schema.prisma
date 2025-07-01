@@ -43,11 +43,12 @@ model User {
 
   // Relations
   jobListings JobListing[]      @relation("EmployerJobs")
-  profile     JobSeekerProfile? @relation("SeekerProfile")
+  profile     JobSeekerProfile?  @relation("SeekerProfile")
   applications JobApplication[] @relation("UserApplications")
   
   //Friends
   friends       User[]       @relation("friends")
+  friendOf      User[]       @relation("friends")
   sentFriendRequest    User[]  @relation("sentFriendRequest")
   pendingFriendRequest User[]  @relation("sentFriendRequest")
 
@@ -91,17 +92,39 @@ model JobListing {
 }
 
 model JobSeekerProfile {
-  id           String   @id @default(cuid())
+  id           String         @id @default(cuid())
   bio          String?
-  experience   String?
   education    String?
   resumeUrl    String?
-  jobSeekerId  String   @unique
-  jobSeeker    User     @relation("SeekerProfile", fields: [jobSeekerId], references: [id])
+  jobSeekerId  String         @unique
+  jobSeeker    User           @relation("SeekerProfile", fields: [jobSeekerId], references: [id])
 
   // Skill relation
   skills       SkillOnProfile[]
+
+  // NEW: one-to-many experiences
+  experiences  Experience[]
 }
+
+model Experience {
+  id                   String               @id @default(cuid())
+  jobSeekerProfile     JobSeekerProfile     @relation(fields: [jobSeekerProfileId], references: [id])
+  jobSeekerProfileId   String
+
+  jobTitle             String
+  company              String
+  location             String?
+  employmentType       String?
+  startDate            DateTime
+  endDate              DateTime?
+  current              Boolean              @default(false)
+  description          String?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+
+  @@index([jobSeekerProfileId])
+}
+
 
 model Skill {
   id    String  @id @default(cuid())
@@ -150,3 +173,17 @@ model VerificationToken {
 
   @@unique([identifier, token])
   }
+
+  model Message {
+  id            String    @default(cuid()) @id
+  createdAt     DateTime  @default(now()) @map(name: "created_at")
+  updatedAt     DateTime  @updatedAt @map(name: "updated_at")
+  text          String
+  sender        User      @relation("messagesSent", fields: [senderId], references: [id])
+  senderId      String
+  recipient     User      @relation("messagesReceived", fields: [recipientId], references: [id])
+  recipientId   String
+  readBy        User[]    @relation("messagesRead")
+  deliveredAt   DateTime?
+  readAt        DateTime?
+}

@@ -1,6 +1,6 @@
 // /app/api/auth/verify/route.ts
 import { NextResponse, NextRequest } from 'next/server'
-import prisma from '@/app/lib/prisma'
+import prisma from '@/lib/prisma'
 import hashPassword from '@/lib/utils'
 export async function POST(req: NextRequest) {
 
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
       password:    hashed,
     },
   })
-  const jobSeeker = await prisma.jobSeekerProfile.create({
+  await prisma.jobSeekerProfile.create({
     data: {
       bio: '',
       jobSeeker: {
@@ -43,7 +43,9 @@ export async function POST(req: NextRequest) {
         },
       },
       education: '',
-      experience: '',
+      experiences: {
+        create: [],
+      },
       skills: {
         create: [],
       },
