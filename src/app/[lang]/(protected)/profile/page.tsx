@@ -18,10 +18,14 @@ import Header from "../components/Header"
 import { getCurrentUser } from "@/lib/getCurrentUser"
 import { EditContentModal } from "../components/EditContentModal"
 import { User as UserType } from "@/../types/prisma"
+import { Experience } from "@/../types/prisma"
+import DeleteExperience from "../components/DeleteExperience"
 
 export default async function ProfilePage() {
 
     const user = await getCurrentUser() as unknown as UserType
+
+    console.log(user.profile?.experiences)
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header - Same as Dashboard */}
@@ -149,27 +153,29 @@ export default async function ProfilePage() {
                   <EditContentModal type="experience" user={{...user, skills: []}} />
                 </Button>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-start space-x-4">
-                  <Avatar className="h-12 w-12 mt-1">
+              {user?.profile?.experiences.map((experience: Experience) => (
+                <CardContent className="space-y-6" key={experience.id}>
+                  <div className="flex items-start space-x-4">
+                    <Avatar className="h-12 w-12 mt-1">
                     <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-500 text-white">
-                      E
+                      {experience.company.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900">CEO and Founder</h3>
-                    <p className="text-blue-600 font-medium">Econnect</p>
-                    <p className="text-sm text-gray-500 mb-3">7/31/2023 - Present</p>
+                    <h3 className="text-lg font-semibold text-gray-900">{experience.title}</h3>
+                    <p className="text-blue-600 font-medium">{experience.company}</p>
+                    <p className="text-sm text-gray-500 mb-3">{new Date(experience.startDate).toLocaleDateString()} - {new Date(experience.endDate).toLocaleDateString()}</p>
                     <div className="text-gray-700">
-                      <p className="mb-2">
-                        • Econnect is a social platform that aims to connect job seekers with employers in Ethiopia. The
-                        project aims to address the inefficient job search process and the high unemployment rate among
-                        recent university graduates in the country.
+                      <p className="mb-2 text-sm ">
+                        {experience.description}
                       </p>
                     </div>
                   </div>
+                  <DeleteExperience id={experience.id} />
                 </div>
+                <Separator className="my-3" />
               </CardContent>
+              ))}
             </Card>
 
             {/* Education Section */}

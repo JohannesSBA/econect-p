@@ -45,7 +45,16 @@ export async function getCurrentUser() {
       messagesSent: true,
       password:     false,
       pendingFriendRequest: true,
-      profile:      true,
+      profile:      {
+        select: {
+          id: true,
+          bio: true,
+          education: true,
+          skills: true,
+          resumeUrl: true,
+          experiences: true,
+        },
+      },
       sentFriendRequest: true,
       sessions:     false,
       },
