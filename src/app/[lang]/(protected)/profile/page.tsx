@@ -21,6 +21,7 @@ import { User as UserType } from "@/../types/prisma"
 import { Experience } from "@/../types/prisma"
 import DeleteExperience from "../components/DeleteExperience"
 import ExperienceSection from "./ExperienceSection"
+import EducationSection from "./EducationSection"
 
 export default async function ProfilePage() {
 
@@ -147,31 +148,7 @@ export default async function ProfilePage() {
             <ExperienceSection user={user} />
 
             {/* Education Section */}
-            <Card className="bg-white shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <GraduationCap className="h-5 w-5 text-gray-600" />
-                  <CardTitle className="text-lg font-semibold">Education</CardTitle>
-                </div>
-                <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">
-                  <EditContentModal type="education" user={{...user, skills: []}} />
-                </Button>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-start space-x-4">
-                  <Avatar className="h-12 w-12 mt-1">
-                    <AvatarFallback className="bg-gradient-to-r from-red-500 to-orange-500 text-white">
-                      FU
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900">Fordham University</h3>
-                    <p className="text-gray-600">Bachelor&apos;s Degree, Computer Science</p>
-                    <p className="text-sm text-gray-500">2020 - 2024</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <EducationSection user={user} />
 
             <Card className="bg-white shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between">

@@ -103,7 +103,6 @@ async function main() {
         data: {
           jobSeekerId: user.id,
           bio: `Experienced ${['developer', 'accountant', 'engineer'][i % 3]} with ${i + 2} years in the field`,
-          education: `BSc in ${['Computer Science', 'Accounting', 'Engineering'][i % 3]} from ${['AAU', 'HU', 'JU'][i % 3]}`,
           resumeUrl: `https://econnect.et/resumes/${user.id}.pdf`,
         },
       })

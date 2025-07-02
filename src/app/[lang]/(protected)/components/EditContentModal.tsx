@@ -45,12 +45,12 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
   })
   const [educationForm, setEducationForm] = useState({
     school: "",
-    degree: "",
+    degreeType: "",
     fieldOfStudy: "",
-    grade: "",
-    startYear: "",
-    endYear: "",
-    activities: "",
+    grade: 0.0,
+    StartYear: "",
+    EndYear: "",
+    activites: "",
   })
 
 
@@ -116,10 +116,10 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
             toast.error("Please fill in all required fields.")
             return
           }
-          await axios.post("/api/me/education", {
+          await axios.post("/api/me/newEducation", {
             ...educationForm,
-            startYear: Number.parseInt(educationForm.startYear) || 0,
-            endYear: educationForm.endYear ? Number.parseInt(educationForm.endYear) : undefined,
+            StartYear: Number.parseInt(educationForm.StartYear) || 0,
+            EndYear: educationForm.EndYear ? Number.parseInt(educationForm.EndYear) : undefined,
           })
           toast.success("Education added successfully!")
           break
@@ -383,18 +383,18 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
                 <div>
                   <Label htmlFor="degree">Degree</Label>
                   <Select
-                    value={educationForm.degree}
-                    onValueChange={(value) => setEducationForm({ ...educationForm, degree: value })}
+                    value={educationForm.degreeType}
+                    onValueChange={(value) => setEducationForm({ ...educationForm, degreeType: value })}
                   >
                     <SelectTrigger className="mt-1">
                       <SelectValue placeholder="Select degree" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="bachelor">Bachelor&apos;s Degree</SelectItem>
-                      <SelectItem value="master">Master&apos;s Degree</SelectItem>
-                      <SelectItem value="phd">PhD</SelectItem>
-                      <SelectItem value="diploma">Diploma</SelectItem>
-                      <SelectItem value="certificate">Certificate</SelectItem>
+                      <SelectItem value="BACHELOR">Bachelor&apos;s Degree</SelectItem>
+                      <SelectItem value="MASTER">Master&apos;s Degree</SelectItem>
+                      <SelectItem value="PHD">PhD</SelectItem>
+                      <SelectItem value="DIPLOMA">Diploma</SelectItem>
+                      <SelectItem value="CERTIFICATE">Certificate</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -415,11 +415,27 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
                   <Label htmlFor="grade">Grade/GPA</Label>
                   <Input
                     id="grade"
-                    placeholder="e.g. 3.8/4.0"
+                    type="number"
+                    min="0"
+                    max="4"
+                    step="0.01"
+                    placeholder="e.g. 3.80"
                     className="mt-1"
-                    value={educationForm.grade}
-                    onChange={(e) => setEducationForm({ ...educationForm, grade: e.target.value })}
-                  />
+                    value={educationForm.grade ?? ''}
+                    onChange={(e) => {
+                        const raw = e.target.value
+                        // Empty string should clear, otherwise parse to float
+                        if (raw === '') {
+                        setEducationForm({ ...educationForm, grade: 0 })
+                        return
+                        }
+                        const num = parseFloat(raw)
+                        // Only update if it's a valid number in range
+                        if (!isNaN(num) && num >= 0 && num <= 4) {
+                        setEducationForm({ ...educationForm, grade: num })
+                        }
+                    }}
+                    />
                 </div>
               </div>
 
@@ -431,8 +447,8 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
                     type="number"
                     placeholder="e.g. 2020"
                     className="mt-1"
-                    value={educationForm.startYear}
-                    onChange={(e) => setEducationForm({ ...educationForm, startYear: e.target.value })}
+                    value={educationForm.StartYear}
+                    onChange={(e) => setEducationForm({ ...educationForm, StartYear: e.target.value })}
                   />
                 </div>
                 <div>
@@ -442,20 +458,20 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
                     type="number"
                     placeholder="e.g. 2024"
                     className="mt-1"
-                    value={educationForm.endYear}
-                    onChange={(e) => setEducationForm({ ...educationForm, endYear: e.target.value })}
+                    value={educationForm.EndYear}
+                    onChange={(e) => setEducationForm({ ...educationForm, EndYear: e.target.value })}
                   />
                 </div>
               </div>
 
               <div>
-                <Label htmlFor="activities">Activities and Societies</Label>
+                <Label htmlFor="activites">activites and Societies</Label>
                 <Textarea
-                  id="activities"
-                  placeholder="List any clubs, organizations, or activities you participated in..."
+                  id="activites"
+                  placeholder="List any clubs, organizations, or activites you participated in..."
                   className="min-h-[100px] mt-1"
-                  value={educationForm.activities}
-                  onChange={(e) => setEducationForm({ ...educationForm, activities: e.target.value })}
+                  value={educationForm.activites}
+                  onChange={(e) => setEducationForm({ ...educationForm, activites: e.target.value })}
                 />
               </div>
             </div>

@@ -31,6 +31,14 @@ enum JobStatus {
   PAUSED
 }
 
+enum degreeType {
+  BACHELOR
+  MASTER
+  PHD
+  DIPLOMA
+  CERTIFICATE
+}
+
 model User {
   id          String            @id @default(cuid())
   name        String
@@ -94,7 +102,7 @@ model JobListing {
 model JobSeekerProfile {
   id           String         @id @default(cuid())
   bio          String?
-  education    String?
+  education    Education[]
   resumeUrl    String?
   jobSeekerId  String         @unique
   jobSeeker    User           @relation("SeekerProfile", fields: [jobSeekerId], references: [id])
@@ -123,6 +131,20 @@ model Experience {
   updatedAt            DateTime             @updatedAt
 
   @@index([jobSeekerProfileId])
+}
+
+model Education {
+  id                  String                @id @default(cuid())
+  jobSeekerProfile    JobSeekerProfile      @relation(fields: [jobSeekerProfileId], references: [id])
+  jobSeekerProfileId  String
+
+  school              String
+  degreeType          degreeType
+  fieldOfStudy        String?
+  grade               Float
+  StartYear           Int
+  EndYear             Int
+  activites           String?
 }
 
 

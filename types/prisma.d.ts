@@ -78,3 +78,15 @@ export interface Experience {
   description: string
   jobSeekerId: string
 }
+
+export interface Education {
+  id: string
+  school: string
+  degree: string
+  fieldOfStudy: string
+  startYear: string
+  endYear: string
+  description: string
+  jobSeekerId: string
+  skills: string[]
+}
