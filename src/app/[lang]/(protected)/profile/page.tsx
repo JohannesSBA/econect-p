@@ -20,6 +20,7 @@ import { EditContentModal } from "../components/EditContentModal"
 import { User as UserType } from "@/../types/prisma"
 import { Experience } from "@/../types/prisma"
 import DeleteExperience from "../components/DeleteExperience"
+import ExperienceSection from "./ExperienceSection"
 
 export default async function ProfilePage() {
 
@@ -143,40 +144,7 @@ export default async function ProfilePage() {
             </Card>
 
             {/* Experience Section */}
-            <Card className="bg-white shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Briefcase className="h-5 w-5 text-gray-600" />
-                  <CardTitle className="text-lg font-semibold">Experience</CardTitle>
-                </div>
-                <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">
-                  <EditContentModal type="experience" user={{...user, skills: []}} />
-                </Button>
-              </CardHeader>
-              {user?.profile?.experiences.map((experience: Experience) => (
-                <CardContent className="space-y-6" key={experience.id}>
-                  <div className="flex items-start space-x-4">
-                    <Avatar className="h-12 w-12 mt-1">
-                    <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-500 text-white">
-                      {experience.company.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900">{experience.title}</h3>
-                    <p className="text-blue-600 font-medium">{experience.company}</p>
-                    <p className="text-sm text-gray-500 mb-3">{new Date(experience.startDate).toLocaleDateString()} - {new Date(experience.endDate).toLocaleDateString()}</p>
-                    <div className="text-gray-700">
-                      <p className="mb-2 text-sm ">
-                        {experience.description}
-                      </p>
-                    </div>
-                  </div>
-                  <DeleteExperience id={experience.id} />
-                </div>
-                <Separator className="my-3" />
-              </CardContent>
-              ))}
-            </Card>
+            <ExperienceSection user={user} />
 
             {/* Education Section */}
             <Card className="bg-white shadow-sm">
