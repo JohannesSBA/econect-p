@@ -82,11 +82,12 @@ export interface Experience {
 export interface Education {
   id: string
   school: string
-  degree: string
+  degreeType: string
   fieldOfStudy: string
-  startYear: string
-  endYear: string
-  description: string
+  StartYear: string
+  EndYear: string
+  activites: string
+  grade: number
   jobSeekerId: string
   skills: string[]
 }

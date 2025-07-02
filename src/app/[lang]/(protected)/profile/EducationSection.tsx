@@ -9,10 +9,11 @@ import { Button } from '@/components/ui/button'
 import { EditContentModal } from '../components/EditContentModal'
 import DeleteEducation from '../components/DeleteEducation'
 import type { User, Education } from '@/../types/prisma'
+import { toast } from 'sonner'
 
 export default function EducationSection({ user }: { user: User }) {
   // keep educations in state
-  const initial = user.profile?.educationEntries || []  // rename as per your shape
+  const initial = user.profile?.education || []  // rename as per your shape
   const [educations, setEducations] = useState<Education[]>(initial)
   const [backup, setBackup] = useState<Education[]>(initial)
 
@@ -21,6 +22,7 @@ export default function EducationSection({ user }: { user: User }) {
     setEducations(educations.filter((e) => e.id !== id))
   }
   const handleRollback = () => {
+    toast.error('Error deleting education, please try again later.')
     setEducations(backup)
   }
 
@@ -50,12 +52,22 @@ export default function EducationSection({ user }: { user: User }) {
                 {edu.school}
               </h3>
               <p className="text-gray-600">
-                {edu.degree}, {edu.fieldOfStudy}
+                {edu.degreeType}, {edu.fieldOfStudy}
               </p>
               <p className="text-sm text-gray-500">
-                {edu.startYear} – {edu.endYear || 'Present'}
+                {edu.StartYear} – {edu.EndYear || 'Present'}
               </p>
+              <div>
+                <p className="text-sm text-gray-500">
+              GPA: {edu.grade}
+            </p>
+            <p className="text-sm block text-gray-500">
+              Activities: {edu.activites}
+            </p>
             </div>
+
+            </div>
+            
 
             <DeleteEducation
               id={edu.id}

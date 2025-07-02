@@ -16,6 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Plus, X, Upload, FileText, Calendar, MapPin, GraduationCap, Award, Trash2, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import axios from "axios"
+import { useRouter } from "next/navigation"
 
 interface EditContentModalProps {
   user: { profile: { bio: string }; skills: string[]; id: string }
@@ -30,7 +31,7 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
   const [skills, setSkills] = useState<string[]>([])
   const [newSkill, setNewSkill] = useState("")
   const [resume, setResume] = useState<string | null>(null)
-
+  const router = useRouter()
   // Form states
   const [aboutText, setAboutText] = useState("")
   const [experienceForm, setExperienceForm] = useState({
@@ -96,6 +97,9 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
         case "about":
             await axios.post("/api/me/profile", { about: aboutText })
           toast.success("About section updated successfully!")
+          setTimeout(() => {
+            router.refresh()
+          }, 1000)
           break
 
         case "experience":
@@ -109,6 +113,9 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
             endDate: experienceForm.endDate ? Number.parseInt(experienceForm.endDate) : undefined,
           })
           toast.success("Experience added successfully!")
+          setTimeout(() => {
+            router.refresh()
+          }, 1000)
           break
 
         case "education":
@@ -122,11 +129,17 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
             EndYear: educationForm.EndYear ? Number.parseInt(educationForm.EndYear) : undefined,
           })
           toast.success("Education added successfully!")
+          setTimeout(() => {
+            router.refresh()
+          }, 1000)
           break
 
         case "skills":
           await axios.post("/api/me/skills", { skills })
           toast.success("Skills updated successfully!")
+          setTimeout(() => {
+            router.refresh()
+          }, 1000)
           break
       }
 
