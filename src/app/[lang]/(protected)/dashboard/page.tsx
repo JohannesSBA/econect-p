@@ -1,4 +1,3 @@
-"use client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -19,15 +18,17 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import Header from "../components/Header"
-import { useParams } from "next/navigation"
+import { getCurrentUser } from "@/lib/getCurrentUser"
+import { User } from "@/../types/prisma"
 
-export default function DashboardPage() {
-    const {lang} = useParams()
+export default async function DashboardPage({ params }: { params: Promise<{ lang: 'en' | 'am' }> }) {
 
+    const { lang } = await params
+    const user = await getCurrentUser() as unknown as User
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <Header lang={lang as string} />
+      <Header lang={lang} user={user} />
 
       <div className="container mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -352,11 +353,11 @@ export default function DashboardPage() {
                 <div className="flex items-center space-x-3 mb-4">
                   <Avatar className="h-12 w-12">
                     <AvatarImage src="/placeholder.svg?height=48&width=48" />
-                    <AvatarFallback>JB</AvatarFallback>
+                    <AvatarFallback>{user?.name?.charAt(0)}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-blue-600">Johannes Bekele</h3>
-                    <p className="text-sm text-gray-500">johannes@econnectpilot.com</p>
+                    <h3 className="font-semibold text-blue-600">{user?.name}</h3>
+                    <p className="text-sm text-gray-500">{user?.email}</p>
                   </div>
                 </div>
 
@@ -385,7 +386,7 @@ export default function DashboardPage() {
                 </div>
 
                 <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
-                  View Your Profile
+                  <Link href={`/${lang}/profile`}>View Your Profile</Link>
                 </Button>
               </CardContent>
             </Card>

@@ -18,20 +18,18 @@ import Header from "../components/Header"
 import { getCurrentUser } from "@/lib/getCurrentUser"
 import { EditContentModal } from "../components/EditContentModal"
 import { User as UserType } from "@/../types/prisma"
-import { Experience } from "@/../types/prisma"
-import DeleteExperience from "../components/DeleteExperience"
 import ExperienceSection from "./ExperienceSection"
 import EducationSection from "./EducationSection"
 
 export default async function ProfilePage() {
 
     const user = await getCurrentUser() as unknown as UserType
-
+    console.log(user)
     console.log(user.profile?.experiences)
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header - Same as Dashboard */}
-      <Header lang="en" />
+      <Header lang="en" user={user} />
 
       <div className="container mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
