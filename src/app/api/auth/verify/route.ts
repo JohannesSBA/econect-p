@@ -42,7 +42,9 @@ export async function POST(req: NextRequest) {
           id: user.id,
         },
       },
-      education: '',
+      education: {
+        create: [],
+      },
       experiences: {
         create: [],
       },

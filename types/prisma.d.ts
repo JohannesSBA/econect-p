@@ -1,4 +1,4 @@
-export type UserRole = 'ADMIN' | 'MODERATOR' | 'EMPLOYER' | 'JOB_SEEKER'
+export type UserRole = 'ADMIN' | 'MODERATOR' | 'EMPLOYER' | 'JOB_SEEKER' | 'RECRUITER'
 
 export interface CreateUserInput {
   name: string

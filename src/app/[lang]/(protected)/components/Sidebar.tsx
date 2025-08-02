@@ -6,6 +6,7 @@ import { FileText, Briefcase, Users } from "lucide-react"
 import Link from "next/link"
 import { User } from "@/../types/prisma"
 import { Separator } from "@/components/ui/separator"
+import { getAvatarUrl } from "@/lib/image-utils"
 
 export default function Sidebar({ user, lang }: { user: User, lang: 'en' | 'am' }) {
     return (
@@ -15,8 +16,10 @@ export default function Sidebar({ user, lang }: { user: User, lang: 'en' | 'am' 
               <CardContent className="p-4">
                 <div className="flex items-center space-x-3 mb-4">
                   <Avatar className="h-12 w-12">
-                    <AvatarImage src="/placeholder.svg?height=48&width=48" />
-                    <AvatarFallback>{user?.name?.charAt(0)}</AvatarFallback>
+                    <AvatarImage src={getAvatarUrl((user as any)?.image, user?.name)} />
+                    <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-500 text-white">
+                      {user?.name?.charAt(0)?.toUpperCase() || "U"}
+                    </AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
                     <h3 className="font-semibold text-blue-600">{user?.name}</h3>
@@ -25,62 +28,65 @@ export default function Sidebar({ user, lang }: { user: User, lang: 'en' | 'am' 
                 </div>
 
                 <div className="space-y-3 mb-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Users className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm text-gray-700">Your Connections</span>
-                    </div>
-                    <Badge className="bg-blue-100 text-blue-700">4</Badge>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">Profile Views</span>
+                    <span className="font-medium">1,234</span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <FileText className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm text-gray-700">Your Posts</span>
-                    </div>
-                    <Badge className="bg-gray-100 text-gray-700">0</Badge>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">Connections</span>
+                    <span className="font-medium">567</span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Briefcase className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm text-gray-700">Open Job Applications</span>
-                    </div>
-                    <Badge className="bg-green-100 text-green-700">2</Badge>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">Posts</span>
+                    <span className="font-medium">89</span>
                   </div>
                 </div>
 
-                <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
-                  <Link href={`/${lang}/profile`}>View Your Profile</Link>
-                </Button>
+                <Separator className="my-4" />
+
+                <div className="space-y-2">
+                  <Link href={`/${lang}/profile`}>
+                    <Button variant="outline" className="w-full justify-start">
+                      <FileText className="h-4 w-4 mr-2" />
+                      View Profile
+                    </Button>
+                  </Link>
+                  <Link href={`/${lang}/jobs`}>
+                    <Button variant="outline" className="w-full justify-start">
+                      <Briefcase className="h-4 w-4 mr-2" />
+                      Job Listings
+                    </Button>
+                  </Link>
+                  <Link href={`/${lang}/users`}>
+                    <Button variant="outline" className="w-full justify-start">
+                      <Users className="h-4 w-4 mr-2" />
+                      Find People
+                    </Button>
+                  </Link>
+                </div>
               </CardContent>
             </Card>
 
-            {/* Footer Links */}
+            {/* Quick Stats */}
             <Card className="bg-white shadow-sm">
               <CardContent className="p-4">
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <Link href="/about" className="text-gray-600 hover:text-blue-600">
-                    About
-                  </Link>
-                  <Link href="/accessibility" className="text-gray-600 hover:text-blue-600">
-                    Accessibility
-                  </Link>
-                  <Link href="/privacy" className="text-gray-600 hover:text-blue-600">
-                    Privacy & Terms
-                  </Link>
-                  <Link href="/faq" className="text-gray-600 hover:text-blue-600">
-                    FAQ&apos;s
-                  </Link>
-                  <Link href="/advertising" className="text-gray-600 hover:text-blue-600">
-                    Advertising
-                  </Link>
-                  <Link href="/contact" className="text-gray-600 hover:text-blue-600">
-                    Contact
-                  </Link>
+                <h3 className="font-semibold text-gray-900 mb-3">Quick Stats</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Applications</span>
+                    <Badge variant="secondary">12</Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Interviews</span>
+                    <Badge variant="secondary">3</Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Saved Jobs</span>
+                    <Badge variant="secondary">8</Badge>
+                  </div>
                 </div>
-                <Separator className="my-3" />
-                <p className="text-xs text-gray-500 text-center">🇪🇹 Econnect Corporation © 2024</p>
               </CardContent>
             </Card>
-          </div>
+        </div>
     )
 }

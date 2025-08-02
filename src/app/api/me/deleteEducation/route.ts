@@ -22,10 +22,8 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const education = await prisma.education.delete({
-    where: {
-      id,
-    },
+  const _education = await prisma.education.delete({
+    where: { id: id }
   });
 
   return NextResponse.json({ message: "Education deleted" }, { status: 200 });

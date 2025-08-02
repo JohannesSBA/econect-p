@@ -22,10 +22,8 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const experience = await prisma.experience.delete({
-    where: {
-      id,
-    },
+  const _experience = await prisma.experience.delete({
+    where: { id: id }
   });
 
   return NextResponse.json({ message: "Experience deleted" }, { status: 200 });

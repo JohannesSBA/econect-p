@@ -22,8 +22,6 @@ export async function getCurrentUser() {
     return null
   }
 
-  console.log("userEmail", userEmail)
-
   // 2) Fetch full user record using email
   try {
     const user = await prisma.user.findUnique({
@@ -36,15 +34,13 @@ export async function getCurrentUser() {
       role:         true,
       createdAt:    true,
       applications: true,
-      friendOf:     true,
       jobListings:  true,
+      image:        true,
       messagesRead: true,
       language:     true,
-      friends:      true,
       messagesReceived: true,
       messagesSent: true,
       password:     false,
-      pendingFriendRequest: true,
       profile:      {
         select: {
           id: true,
@@ -55,7 +51,6 @@ export async function getCurrentUser() {
           experiences: true,
         },
       },
-      sentFriendRequest: true,
       sessions:     false,
       },
     })
@@ -64,8 +59,7 @@ export async function getCurrentUser() {
       console.error("No user found with email:", userEmail)
       return null
     }
-
-    console.log("user", user)
+    
     return user
   } catch (error) {
     console.error("Error fetching user:", error)

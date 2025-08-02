@@ -11,15 +11,12 @@ export default async function getUser(id: string) {
       role:         true,
       createdAt:    true,
       applications: true,
-      friendOf:     true,
       jobListings:  true,
       messagesRead: true,
       language:     true,
-      friends:      true,
       messagesReceived: true,
       messagesSent: true,
       password:     false,
-      pendingFriendRequest: true,
       profile:      {
         select: {
           id: true,
@@ -30,7 +27,6 @@ export default async function getUser(id: string) {
           experiences: true,
         },
       },
-      sentFriendRequest: true,
       sessions:     false,
       },
     })
