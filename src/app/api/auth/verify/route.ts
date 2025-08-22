@@ -6,7 +6,7 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json()
   console.log(body)
-  const { email, code, firstName, lastName, password, phone } = body
+  const { email, code, firstName, lastName, password, phone, accountType, companyName, website } = body
 
   // 1) Pull & clear our OTP cookie
   const cookie = req.cookies.get('econnect_otp')
@@ -30,11 +30,20 @@ export async function POST(req: NextRequest) {
       name:        firstName + ' ' + lastName,
       email,
       phone:       phone,
-      role:        'JOB_SEEKER',
+      role:        accountType === 'EMPLOYER' ? 'EMPLOYER' : 'JOB_SEEKER',
       password:    hashed,
     },
   })
-  await prisma.jobSeekerProfile.create({
+  if (accountType === 'EMPLOYER') {
+    await prisma.employerProfile.create({
+      data: {
+        userId: user.id,
+        companyName: companyName || firstName + ' ' + lastName,
+        website: website || null,
+      },
+    })
+  } else {
+    await prisma.jobSeekerProfile.create({
     data: {
       bio: '',
       jobSeeker: {
@@ -53,6 +62,7 @@ export async function POST(req: NextRequest) {
       },
     },
   })
+  }
 
   // 4) Clear the cookie & return success
   const clearCookie = `econnect_otp=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; Secure; SameSite=Strict`

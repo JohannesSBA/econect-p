@@ -17,9 +17,12 @@ import Sidebar from "../components/Sidebar"
 import prisma from "@/lib/prisma"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { getAvatarUrl } from "@/lib/image-utils"
+import { CreatePost } from "../components/CreatePost"
+
 
 interface PostWithAuthor {
   id: string
+  title?: string | null
   content: string
   createdAt: Date
   author: {
@@ -30,6 +33,7 @@ interface PostWithAuthor {
   }
   likes: Array<{ id: string }>
   comments: Array<{ id: string }>
+  images?: string[]
 }
 
 export default async function DashboardPage({ params }: { params: Promise<{ lang: 'en' | 'am' }> }) {
@@ -105,7 +109,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ lang
               </CardHeader>
               <CardContent className="space-y-1">
                 <Link
-                  href="/connections"
+                  href="/en/connections"
                   className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   <div className="flex items-center space-x-3">
@@ -120,7 +124,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ lang
                   </div>
                 </Link>
                 <Link
-                  href="/grow-network"
+                  href="/en/grow-network"
                   className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   <div className="flex items-center space-x-3">
@@ -132,7 +136,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ lang
                   </div>
                 </Link>
                 <Link
-                  href="/pending-requests"
+                  href="/en/pending-requests"
                   className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   <div className="flex items-center space-x-3">
@@ -157,19 +161,19 @@ export default async function DashboardPage({ params }: { params: Promise<{ lang
                 <h2 className="text-lg font-semibold text-gray-900">Quick Actions</h2>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Link href="/jobs">
+                <Link href="/en/jobs">
                   <Button variant="outline" className="w-full justify-start">
                     <Building className="h-4 w-4 mr-2" />
                     Find Jobs
                   </Button>
                 </Link>
-                <Link href="/profile">
+                <Link href="/en/profile">
                   <Button variant="outline" className="w-full justify-start">
                     <UserPlus className="h-4 w-4 mr-2" />
                     Update Profile
                   </Button>
                 </Link>
-                <Link href="/chat">
+                <Link href="/en/chat">
                   <Button variant="outline" className="w-full justify-start">
                     <MessageSquare className="h-4 w-4 mr-2" />
                     Messages
@@ -182,27 +186,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ lang
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Create Post */}
-            <Card className="bg-white shadow-sm">
-              <CardContent className="p-4">
-                <div className="flex items-center space-x-3">
-                  <Avatar className="h-8 w-8">
-                  <AvatarImage src={getAvatarUrl(user?.image, user?.name)} />
-                  <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-500 text-white text-sm">
-                    {user?.name?.split(" ").map((n: string) => n[0]).join("").toUpperCase() || "U"}
-                  </AvatarFallback>
-                </Avatar>
-                  <div className="flex-1">
-                    <input
-                      placeholder="What do you want to talk about?"
-                      className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                  <Button className="bg-blue-600 hover:bg-blue-700">
-                    Post
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <CreatePost user={user} />
 
             {/* Posts Feed */}
             <div className="space-y-6">
@@ -210,12 +194,17 @@ export default async function DashboardPage({ params }: { params: Promise<{ lang
                 <Card key={post.id} className="bg-white shadow-sm">
                   <CardContent className="p-6">
                     <div className="flex items-start space-x-3 mb-4">
-                      <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold">
-                        {post.author.name.split(" ").map((n: string) => n[0]).join("").toUpperCase()}
-                      </div>
+                      <Link href={`/${lang}/user/${post.author.id}`}>
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage src={getAvatarUrl(post.author.image, post.author.name)} />
+                          <AvatarFallback>{post.author.name.split(" ").map((n: string) => n[0]).join("").toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                      </Link>
                       <div className="flex-1">
                         <div className="flex items-center space-x-2">
-                          <h3 className="font-semibold text-gray-900">{post.author.name}</h3>
+                          <Link href={`/${lang}/user/${post.author.id}`}>
+                            <h3 className="font-semibold text-gray-900">{post.author.name}</h3>
+                          </Link>
                           {post.author.headline && (
                             <Badge variant="secondary" className="text-xs">
                               {post.author.headline}
@@ -229,7 +218,18 @@ export default async function DashboardPage({ params }: { params: Promise<{ lang
                     </div>
 
                     <div className="mb-4">
+                      {post.title && (
+                        <h4 className="text-gray-900 font-semibold mb-1">{post.title}</h4>
+                      )}
                       <p className="text-gray-800 mb-2">{post.content}</p>
+                      {post.images && post.images.length > 0 && (
+                        <div className="grid grid-cols-3 gap-2 mt-2">
+                          {post.images.map((url) => (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img key={url} src={url} alt="post" className="w-full h-32 object-cover rounded" />
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex items-center space-x-6 mb-4">

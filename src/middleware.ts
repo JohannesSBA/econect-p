@@ -7,11 +7,10 @@ const secret = process.env.NEXTAUTH_SECRET
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
-  // Skip _next, static, api, favicon
+  // Skip _next, static, favicon
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/static') ||
-    pathname.startsWith('/api') ||
     pathname === '/favicon.ico'
   ) {
     return NextResponse.next()
@@ -52,6 +51,60 @@ export async function middleware(req: NextRequest) {
     if (!token) {
       return NextResponse.redirect(new URL(`/${lang}/auth/login`, req.url))
     }
+  }
+
+  // 3) Employer-only area (pages)
+  if (firstAfterLocale === 'employer') {
+    if (!token) {
+      return NextResponse.redirect(new URL(`/${lang}/auth/login`, req.url))
+    }
+    const role = (token as any).role
+    const allowed = role === 'EMPLOYER' || role === 'ADMIN' || role === 'RECRUITER'
+    if (!allowed) {
+      // Redirect to dashboard if logged-in but not allowed
+      return NextResponse.redirect(new URL(`/${lang}/dashboard`, req.url))
+    }
+  }
+
+  // 4) API RBAC enforcement
+  if (pathname.startsWith('/api')) {
+    // Allow auth and webhooks without role checks
+    if (pathname.startsWith('/api/auth') || pathname.startsWith('/api/webhooks')) {
+      return NextResponse.next()
+    }
+
+    // Get token once for API checks
+    const apiToken = token || (await getToken({ req, secret }))
+    const apiRole = (apiToken as any)?.role as string | undefined
+
+    // Employer-only APIs
+    if (pathname.startsWith('/api/employer/')) {
+      if (!apiToken) return new NextResponse('Unauthorized', { status: 401 })
+      const allowed = apiRole === 'EMPLOYER' || apiRole === 'ADMIN' || apiRole === 'RECRUITER'
+      if (!allowed) return new NextResponse('Forbidden', { status: 403 })
+      return NextResponse.next()
+    }
+
+    // Admin-only APIs
+    if (pathname.startsWith('/api/admin/')) {
+      if (!apiToken) return new NextResponse('Unauthorized', { status: 401 })
+      if (apiRole !== 'ADMIN') return new NextResponse('Forbidden', { status: 403 })
+      return NextResponse.next()
+    }
+
+    // Seeker-only APIs (apply, bookmark)
+    const seekerOnly = (
+      pathname.startsWith('/api/jobs/apply') ||
+      pathname.startsWith('/api/job/') && pathname.endsWith('/apply') ||
+      pathname.startsWith('/api/jobs/bookmark')
+    )
+    if (seekerOnly) {
+      if (!apiToken) return new NextResponse('Unauthorized', { status: 401 })
+      if (apiRole !== 'JOB_SEEKER') return new NextResponse('Forbidden', { status: 403 })
+      return NextResponse.next()
+    }
+
+    return NextResponse.next()
   }
 
   

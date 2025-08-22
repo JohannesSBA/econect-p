@@ -27,6 +27,9 @@ export async function POST(req: NextRequest) {
       case "company-image":
         fileUrl = await uploadImage(file, user.id, "company");
         break;
+      case "post-image":
+        fileUrl = await uploadImage(file, user.id, "post");
+        break;
       case "resume":
         fileUrl = await uploadResume(file, user.id, jobId);
         break;

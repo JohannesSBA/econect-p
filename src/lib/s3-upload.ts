@@ -1,11 +1,16 @@
 import { PutObjectCommand, S3 } from "@aws-sdk/client-s3";
 
+const AWS_REGION = process.env.AWS_REGION || "us-east-1";
+const ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID || process.env.S3ACCESS_KEY_ID || "";
+const SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY || process.env.S3SECRET_ACCESS_KEY || "";
+const BUCKET = process.env.AWS_S3_BUCKET || process.env.BUCKET_NAME || "";
+
 const s3 = new S3({
-  region: "us-east-1",
-  credentials: {
-    accessKeyId: process.env.S3ACCESS_KEY_ID as string,
-    secretAccessKey: process.env.S3SECRET_ACCESS_KEY as string,
-  },
+  region: AWS_REGION,
+  credentials: ACCESS_KEY_ID && SECRET_ACCESS_KEY ? {
+    accessKeyId: ACCESS_KEY_ID,
+    secretAccessKey: SECRET_ACCESS_KEY,
+  } : undefined,
 });
 
 export async function uploadToS3(
@@ -16,7 +21,7 @@ export async function uploadToS3(
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
     const fileParams = {
-      Bucket: process.env.BUCKET_NAME as string,
+      Bucket: BUCKET as string,
       Key: key,
       ContentType: contentType,
       Body: buffer,
@@ -26,7 +31,7 @@ export async function uploadToS3(
     await s3.send(command);
 
     // Return the S3 URL
-    return `https://${process.env.BUCKET_NAME}.s3.us-east-1.amazonaws.com/${key}`;
+    return `https://${BUCKET}.s3.${AWS_REGION}.amazonaws.com/${key}`;
   } catch (error) {
     console.error("Error uploading to S3:", error);
     throw new Error("Failed to upload file");
@@ -36,7 +41,7 @@ export async function uploadToS3(
 export async function uploadImage(
   file: File,
   userId: string,
-  type: "profile" | "company" = "profile"
+  type: "profile" | "company" | "post" = "profile"
 ): Promise<string> {
   const timestamp = Date.now();
   const key = `${type}-images/${userId}/${timestamp}-${file.name}`;
@@ -66,5 +71,5 @@ export async function uploadCoverLetter(
 }
 
 export function getS3Url(key: string): string {
-  return `https://${process.env.BUCKET_NAME}.s3.us-east-1.amazonaws.com/${key}`;
+  return `https://${BUCKET}.s3.${AWS_REGION}.amazonaws.com/${key}`;
 } 

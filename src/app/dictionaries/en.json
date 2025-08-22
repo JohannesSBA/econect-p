@@ -91,6 +91,27 @@
     "description": "Connecting talent with opportunity across Ethiopia. Your career journey starts here.",
     "copyright": "© 2024 Econnect. All rights reserved. Made with ❤️ in Ethiopia."
   },
+  "employer": {
+    "dashboard": {
+      "title": "Employer Dashboard",
+      "postJob": "Post a job",
+      "noJobs": "No jobs yet"
+    },
+    "newJob": {
+      "title": "Create Job",
+      "jobTitle": "Job title",
+      "company": "Company",
+      "location": "Location",
+      "description": "Description",
+      "continueToPayment": "Continue to Payment",
+      "processing": "Processing..."
+    },
+    "paywall": {
+      "pending": "Payment pending...",
+      "failed": "Payment failed",
+      "paid": "Payment successful"
+    }
+  },
   "login": {
     "welcomeTitle": "Welcome to Econnect",
     "welcomeSubtitle": "Sign in to continue your career journey",
@@ -170,6 +191,11 @@
     "adama": "Adama",
     "jimma": "Jimma",
     "selectLocation": "Select your city",
-    "selectExperience": "Select your experience level"
+    "selectExperience": "Select your experience level",
+    "accountType": "Account Type",
+    "employer": "Employer",
+    "jobSeeker": "Job Seeker",
+    "companyName": "Company Name",
+    "website": "Website"
   }
 }

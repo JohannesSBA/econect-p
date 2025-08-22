@@ -75,25 +75,16 @@ export async function POST(req: NextRequest) {
     else if (file.type.startsWith('audio/')) fileType = 'audio';
     else if (file.type.startsWith('application/') || file.type.startsWith('text/')) fileType = 'document';
 
-    // Create attachment record
-    const attachment = await prisma.messageAttachment.create({
-      data: {
-        type: fileType,
-        url: `/uploads/${filename}`,
-        filename: file.name,
-        size: file.size,
-        mimeType: file.type,
-        uploadedBy: user.id,
-      }
-    });
-
+    // Return uploaded file metadata (DB record will be created when sending the message)
     return NextResponse.json({
-      id: attachment.id,
-      type: attachment.type,
-      url: attachment.url,
-      filename: attachment.filename,
-      size: attachment.size,
-      mimeType: attachment.mimeType,
+      type: fileType,
+      url: `/uploads/${filename}`,
+      filename: file.name,
+      size: file.size,
+      mimeType: file.type,
+      // Optional fields for UI compatibility
+      thumbnail: null,
+      duration: null,
     });
 
   } catch (error) {

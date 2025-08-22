@@ -20,6 +20,7 @@ import Header from "../components/Header"
 import { getCurrentUser } from "@/lib/getCurrentUser"
 import { User } from "@/../types/prisma"
 import prisma from "@/lib/prisma"
+import { revalidatePath } from "next/cache"
 
 export default async function PendingRequestsPage({ params }: { params: Promise<{ lang: 'en' | 'am' }> }) {
   const { lang } = await params
@@ -83,6 +84,22 @@ export default async function PendingRequestsPage({ params }: { params: Promise<
       createdAt: 'desc'
     }
   })
+
+  async function handleAcceptRequest(id: string): Promise<void> {
+    await prisma.connection.update({
+      where: { id },
+      data: { status: 'ACCEPTED' }
+    })
+    revalidatePath('/en/pending-requests')
+    }
+
+  async function handleDeclineRequest(id: string): Promise<void> {
+    await prisma.connection.update({
+      where: { id },
+      data: { status: 'REJECTED' }
+    })
+    revalidatePath('/en/pending-requests')
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -208,11 +225,18 @@ export default async function PendingRequestsPage({ params }: { params: Promise<
                       </div>
                       
                       <div className="flex items-center space-x-3 mt-4">
-                        <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                        <Button 
+                          variant="default" 
+                          className="bg-blue-600 hover:bg-blue-700 text-white" 
+                          onClick={() => handleAcceptRequest(request.id)}
+                        >
                           <Check className="h-4 w-4 mr-1" />
                           Accept
                         </Button>
-                        <Button size="sm" variant="outline">
+                        <Button 
+                          variant="outline" 
+                          onClick={() => handleDeclineRequest(request.id)}
+                        >
                           <X className="h-4 w-4 mr-1" />
                           Decline
                         </Button>

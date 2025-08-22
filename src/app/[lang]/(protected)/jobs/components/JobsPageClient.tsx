@@ -416,7 +416,7 @@ export default function JobsPageClient({ params, user, initialJobs }: JobsPageCl
                         </div>
                         
                         <div className="flex items-center space-x-3 mt-4 pt-4 border-t border-gray-100">
-                          <Link href={`/jobs/${job.id}`}>
+                          <Link href={`/en/jobs/${job.id}`}>
                             <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
                               View Details
                             </Button>

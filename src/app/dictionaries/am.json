@@ -168,13 +168,22 @@
     "adama": "አዳማ",
     "jimma": "ጅማ",
     "selectLocation": "የሁሉም ቦታ ይምረጡ",
-    "selectExperience": "የሁሉም ደረጃ ይምረጡ"
+    "selectExperience": "የሁሉም ደረጃ ይምረጡ",
+    "accountType": "የመለያ አይነት",
+    "employer": "አስተባባሪ",
+    "jobSeeker": "የስራ ፈላጊ",
+    "companyName": "የኩባንያ ስም",
+    "website": "ድር ገጽ"
   },
   "auth": {
     "login": {
       "title": "ግባ",
       "description": "ግባ እና የተሻለ የስራ መድረክ ይገናኙ።"
     }
+  },
+  "employer": {
+    "dashboard": { "title": "የአመራር ዳሽቦርድ", "postJob": "የስራ ማስታወቂያ አስገባ", "noJobs": "ገና ስራ የለም" },
+    "newJob": { "title": "የስራ ማስታወቂያ ፍጠር", "jobTitle": "የስራ ስም", "company": "ኩባንያ", "location": "አካባቢ", "description": "ማብራሪያ", "continueToPayment": "ወደ ክፍያ ቀጥል", "processing": "በሂደት ላይ..." },
+    "paywall": { "pending": "ክፍያ በመጠባበቅ ላይ...", "failed": "ክፍያ አልተሳካም", "paid": "ክፍያ ተሳክቷል" }
   }
-  
 }

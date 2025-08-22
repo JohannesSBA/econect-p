@@ -54,10 +54,6 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
     activites: "",
   })
 
-
-
-  
-
     // Load initial data when modal opens
   useEffect(() => {
     const loadInitialData = async () => {
@@ -149,6 +145,7 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
         console.log(error);
       toast.error("Failed to save changes. Please try again.")
     } finally {
+      window.location.reload()
       setLoading(false)
     }
   }
@@ -318,7 +315,7 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
                       id="startDate"
                       type="month"
                       className="pl-10"
-                      value={experienceForm.startDate.toISOString()}
+                      value={experienceForm.startDate.toString().split('T')[0].slice(0,7)}
                       onChange={(e) => setExperienceForm({ ...experienceForm, startDate: new Date(e.target.value) })}
                     />
                   </div>
@@ -332,7 +329,7 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
                       type="month"
                       className="pl-10"
                       placeholder="Present if current"
-                      value={experienceForm.endDate}
+                      value={experienceForm.endDate?.toString().split('T')[0].slice(0,7) || ''}
                       onChange={(e) => setExperienceForm({ ...experienceForm, endDate: e.target.value })}
                       disabled={experienceForm.current}
                     />
@@ -504,9 +501,18 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
                     placeholder="e.g. JavaScript, Project Management, etc."
                     value={newSkill}
                     onChange={(e) => setNewSkill(e.target.value)}
-                    onKeyPress={(e) => e.key === "Enter" && addSkill()}
+                    onKeyPress={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault()
+                        addSkill()
+                      }
+                    }}
                   />
-                  <Button onClick={addSkill} className="bg-gradient-to-r from-blue-600 to-purple-600">
+                  <Button 
+                    onClick={addSkill} 
+                    className="bg-gradient-to-r from-blue-600 to-purple-600"
+                    type="button"
+                  >
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
@@ -520,7 +526,13 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
                   {skills.map((skill, index) => (
                     <Badge key={index} variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-200 pr-1">
                       {skill}
-                      <button onClick={() => removeSkill(skill)} className="ml-2 hover:text-red-600 transition-colors">
+                      <button 
+                        onClick={(e) => {
+                          e.preventDefault()
+                          removeSkill(skill)
+                        }} 
+                        className="ml-2 hover:text-red-600 transition-colors"
+                      >
                         <X className="h-3 w-3" />
                       </button>
                     </Badge>

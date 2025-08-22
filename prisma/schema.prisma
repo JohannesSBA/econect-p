@@ -32,6 +32,14 @@ enum JobStatus {
   PAUSED
 }
 
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
 enum degreeType {
   BACHELOR
   MASTER
@@ -53,6 +61,12 @@ enum NotificationType {
   COMMENT
   JOB_INVITATION
   APPLICATION_UPDATE
+}
+
+enum AdRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum PostType {
@@ -111,6 +125,10 @@ model User {
   messageReactions    MessageReaction[]   @relation("UserReactions")
   onlineStatus        UserOnlineStatus?   @relation("UserOnlineStatus")
   typingIndicators    TypingIndicator[]   @relation("UserTyping")
+  // Employer profile
+  employerProfile     EmployerProfile?
+  payments            Payment[]
+  advertisementRequests AdvertisementRequest[]
 }
 
 model PendingUser {
@@ -144,10 +162,12 @@ model Connection {
 // Posts for LinkedIn-style feed
 model Post {
   id          String    @id @default(cuid())
+  title       String?
   content     String
   type        PostType  @default(TEXT)
   imageUrl    String?   // For image posts
   linkUrl     String?   // For link posts
+  images      String[]  @default([])
   authorId    String
   author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
   createdAt   DateTime  @default(now())
@@ -232,12 +252,15 @@ model JobListing {
   status      JobStatus  @default(OPEN)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+  isPublished Boolean    @default(true)
+  publishedAt DateTime?  @default(now())
 
   // Relations
   employerId  String
   employer    User       @relation("EmployerJobs", fields: [employerId], references: [id])
   applications JobApplication[] @relation("JobApplications")
   bookmarks   JobBookmark[]
+  payments    Payment[]
 
   @@index([location, createdAt])
 }
@@ -424,4 +447,64 @@ model TypingIndicator {
   
   @@unique([userId, chatId])
   @@index([chatId])
+}
+
+model AdvertisementRequest {
+  id           String          @id @default(cuid())
+  requesterId  String
+  requester    User            @relation(fields: [requesterId], references: [id])
+  title        String
+  body         String
+  mediaUrl     String?
+  status       AdRequestStatus @default(PENDING)
+  startAt      DateTime?
+  endAt        DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  placements   AdPlacement[]
+
+  @@index([status])
+  @@index([startAt])
+  @@index([endAt])
+}
+
+model AdPlacement {
+  id               String                @id @default(cuid())
+  advertisementId  String
+  advertisement    AdvertisementRequest  @relation(fields: [advertisementId], references: [id])
+  shownCount       Int                   @default(0)
+  lastShownAt      DateTime?
+  createdAt        DateTime              @default(now())
+}
+
+model EmployerProfile {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id])
+  companyName   String
+  companyLogo   String?
+  website       String?
+  bio           String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  provider      String        @default("chapa")
+  status        PaymentStatus @default(PENDING)
+  amount        Int
+  currency      String        @default("ETB")
+  reference     String        @unique
+  metadata      Json?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Relations
+  employerId    String
+  employer      User          @relation(fields: [employerId], references: [id])
+  jobId         String?
+  job           JobListing?   @relation(fields: [jobId], references: [id])
+
+  @@unique([jobId])
 }

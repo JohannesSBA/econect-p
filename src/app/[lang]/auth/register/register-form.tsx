@@ -28,7 +28,7 @@ import { toast } from 'sonner';
 
 interface RegisterFormProps {
   dict: Dictionary['register'];
-  lang: 'en' | 'am';
+  lang: 'en' | 'am' | 'om';
 }
 
 
@@ -51,6 +51,9 @@ export default function RegisterForm({ dict, lang }: RegisterFormProps) {
     confirmPassword: '',
     terms: false,
     newsletter: false,
+    accountType: 'JOB_SEEKER',
+    companyName: '',
+    website: '',
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -138,7 +141,15 @@ export default function RegisterForm({ dict, lang }: RegisterFormProps) {
 
             {/* Form Fields */}
            {step === 'register' ? (
-             <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Account Type */}
+              <div className="space-y-2">
+                <Label>{dict.accountType}</Label>
+                <div className="flex gap-4">
+                  <button type="button" onClick={()=>setFormData(p=>({...p, accountType:'JOB_SEEKER'}))} className={`px-3 py-2 rounded border ${formData.accountType==='JOB_SEEKER' ? 'bg-blue-50 border-blue-400' : 'border-gray-200'}`}>{dict.jobSeeker}</button>
+                  <button type="button" onClick={()=>setFormData(p=>({...p, accountType:'EMPLOYER'}))} className={`px-3 py-2 rounded border ${formData.accountType==='EMPLOYER' ? 'bg-blue-50 border-blue-400' : 'border-gray-200'}`}>{dict.employer}</button>
+                </div>
+              </div>
               {/* Name Fields */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -206,6 +217,16 @@ export default function RegisterForm({ dict, lang }: RegisterFormProps) {
                   />
                 </div>
               </div>
+
+              {/* Employer fields */}
+              {formData.accountType === 'EMPLOYER' && (
+                <div className="space-y-2">
+                  <Label htmlFor="companyName">{dict.companyName}</Label>
+                  <Input id="companyName" name="companyName" type="text" onChange={handleChange} value={formData.companyName} placeholder={dict.companyName} className="py-6 bg-white border-gray-200" />
+                  <Label htmlFor="website">{dict.website}</Label>
+                  <Input id="website" name="website" type="url" onChange={handleChange} value={formData.website} placeholder="https://example.com" className="py-6 bg-white border-gray-200" />
+                </div>
+              )}
 
               {/* Location Select */}
               <div className="space-y-2">

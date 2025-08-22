@@ -270,7 +270,7 @@ export default function SearchPage({ params }: { params: Promise<{ lang: 'en' | 
                     <CardContent className="pt-0">
                       <div className="grid gap-3">
                         {results.people.map((person) => (
-                          <Link key={person.id} href={`/${lang}/profile/${person.id}`}>
+                          <Link key={person.id} href={`/${lang}/${person.role === 'EMPLOYER' ? 'company' : 'user'}/${person.id}`}>
                             <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
                               <Avatar className="h-10 w-10">
                                 <AvatarImage src={person.image || undefined} />
@@ -410,7 +410,7 @@ export default function SearchPage({ params }: { params: Promise<{ lang: 'en' | 
                   <CardContent className="pt-6">
                     <div className="grid gap-3">
                       {results.people.map((person) => (
-                        <Link key={person.id} href={`/${lang}/profile/${person.id}`}>
+                        <Link key={person.id} href={`/${lang}/${person.role === 'EMPLOYER' ? 'company' : 'user'}/${person.id}`}>
                           <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
                             <Avatar className="h-10 w-10">
                               <AvatarImage src={person.image || undefined} />

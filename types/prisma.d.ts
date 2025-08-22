@@ -67,6 +67,7 @@ export interface User {
       profile:      Profile,
       sentFriendRequest: boolean,
       sessions:     Session[],
+      image?:       string,
 }
 
 export interface Experience {

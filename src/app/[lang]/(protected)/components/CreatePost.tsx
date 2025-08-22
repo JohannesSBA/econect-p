@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -23,8 +23,12 @@ interface CreatePostProps {
 }
 
 export function CreatePost({ user }: CreatePostProps) {
+  const [title, setTitle] = useState("")
   const [content, setContent] = useState("")
   const [isExpanded, setIsExpanded] = useState(false)
+  const [images, setImages] = useState<string[]>([])
+  const [isUploading, setIsUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -37,18 +41,57 @@ export function CreatePost({ user }: CreatePostProps) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          title: title.trim() || undefined,
           content: content.trim(),
-          type: "TEXT",
+          type: images.length > 0 ? "IMAGE" : "TEXT",
+          images,
         }),
       })
 
       if (response.ok) {
+        setTitle("")
         setContent("")
+        setImages([])
         setIsExpanded(false)
         // Optionally refresh the feed or add the post to the list
       }
     } catch (error) {
       console.error("Error creating post:", error)
+    }
+  }
+
+  const handlePickImages = () => {
+    if (fileInputRef.current) fileInputRef.current.click()
+  }
+
+  const handleFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
+    const remainingSlots = 3 - images.length
+    const toUpload = files.slice(0, remainingSlots)
+    if (toUpload.length === 0) return
+    setIsUploading(true)
+    try {
+      const uploadedUrls: string[] = []
+      for (const file of toUpload) {
+        if (!file.type.startsWith('image/')) continue
+        if (file.size > 5 * 1024 * 1024) continue
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('type', 'post-image')
+        const res = await fetch('/api/upload', { method: 'POST', body: formData })
+        if (!res.ok) throw new Error('Upload failed')
+        const data = await res.json()
+        if (data?.fileUrl) uploadedUrls.push(data.fileUrl)
+      }
+      if (uploadedUrls.length > 0) {
+        setImages((prev) => [...prev, ...uploadedUrls].slice(0, 3))
+      }
+    } catch (err) {
+      console.error('Failed uploading images', err)
+    } finally {
+      setIsUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ""
     }
   }
 
@@ -81,6 +124,24 @@ export function CreatePost({ user }: CreatePostProps) {
               
               {isExpanded && (
                 <div className="mt-3 space-y-3">
+                  <input
+                    type="text"
+                    placeholder="Add a title (optional)"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className="w-full p-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+
+                  {images.length > 0 && (
+                    <div className="grid grid-cols-3 gap-2">
+                      {images.map((url, idx) => (
+                        <div key={idx} className="relative">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={url} alt="upload" className="w-full h-24 object-cover rounded" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   {/* Privacy selector */}
                   <div className="flex items-center space-x-2">
                     <Globe className="h-4 w-4 text-gray-500" />
@@ -95,10 +156,19 @@ export function CreatePost({ user }: CreatePostProps) {
                         variant="ghost"
                         size="sm"
                         className="text-gray-500 hover:text-blue-600"
+                        onClick={handlePickImages}
                       >
                         <ImageIcon className="h-4 w-4 mr-1" />
                         Media
                       </Button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleFilesSelected}
+                      />
                       <Button
                         type="button"
                         variant="ghost"
@@ -138,11 +208,11 @@ export function CreatePost({ user }: CreatePostProps) {
                     
                     <Button
                       type="submit"
-                      disabled={!content.trim()}
+                      disabled={!content.trim() || isUploading}
                       className="bg-blue-600 hover:bg-blue-700 text-white"
                     >
                       <Send className="h-4 w-4 mr-1" />
-                      Post
+                      {isUploading ? 'Uploading...' : 'Post'}
                     </Button>
                   </div>
                 </div>

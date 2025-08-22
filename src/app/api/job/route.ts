@@ -27,8 +27,12 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = await prisma.user.findUnique({ where: { email: session.user.email } });
-  if (!user || (user.role !== "EMPLOYER" && user.role !== "RECRUITER" && user.role !== "ADMIN"))
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  // For employers, enforce paywall flow via /api/employer/jobs + Chapa checkout
+  if (user.role === 'EMPLOYER') {
+    return NextResponse.json({ error: "Employers must use /api/employer/jobs and complete payment to publish." }, { status: 403 });
+  }
+  // Allow admins and recruiters to create directly (backoffice use)
   const data = await req.json();
   const job = await prisma.jobListing.create({
     data: {

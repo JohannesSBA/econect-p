@@ -12,9 +12,8 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
-    const page = parseInt(searchParams.get("page") || "1")
+    const cursor = searchParams.get('cursor')
     const limit = parseInt(searchParams.get("limit") || "10")
-    const skip = (page - 1) * limit
 
     // Get user's connections
     const user = await prisma.user.findUnique({
@@ -86,11 +85,18 @@ export async function GET(request: NextRequest) {
         }
       },
       orderBy: { createdAt: "desc" },
-      skip,
-      take: limit
+      take: limit + 1,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {} as any)
     })
 
-    return NextResponse.json({ posts })
+    let nextCursor: string | null = null
+    if (posts.length > limit) {
+      const next = posts.pop()!
+      nextCursor = next.id
+    }
+
+    // TODO: inject approved ads at cadence in follow-up
+    return NextResponse.json({ posts, nextCursor })
   } catch (error) {
     console.error("Error fetching posts:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
@@ -105,11 +111,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { content, type = "TEXT", imageUrl, linkUrl } = await request.json()
+    const { title, content, type = "TEXT", images = [], linkUrl } = await request.json()
 
     if (!content || content.trim().length === 0) {
       return NextResponse.json({ error: "Content is required" }, { status: 400 })
     }
+    if (title && title.length > 200) {
+      return NextResponse.json({ error: "Title must be 200 characters or less" }, { status: 400 })
+    }
+    if (!Array.isArray(images)) {
+      return NextResponse.json({ error: "Images must be an array" }, { status: 400 })
+    }
+    if (images.length > 3) {
+      return NextResponse.json({ error: "You can upload up to 3 images" }, { status: 400 })
+    }
+    const sanitizedImages = images
+      .filter((u: unknown) => typeof u === 'string' && (u as string).startsWith('http'))
+      .slice(0, 3)
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email }
@@ -121,10 +139,12 @@ export async function POST(request: NextRequest) {
 
     const post = await prisma.post.create({
       data: {
+        title: title?.trim() || null,
         content: content.trim(),
         type,
-        imageUrl,
+        imageUrl: sanitizedImages[0] || null,
         linkUrl,
+        images: sanitizedImages,
         authorId: user.id
       },
       include: {

@@ -31,6 +31,9 @@ interface UserProfileClientProps {
   isConnected: boolean
   hasPendingRequest: boolean
   isRequestSentByMe: boolean
+  peopleAlsoViewed?: Array<{ id: string; name: string; image?: string | null; headline?: string | null; location?: string | null }>
+  similarProfiles?: Array<{ id: string; name: string; image?: string | null; headline?: string | null; location?: string | null }>
+  connectionCount?: number
 }
 
 export default function UserProfileClient({
@@ -41,6 +44,10 @@ export default function UserProfileClient({
   isConnected,
   hasPendingRequest,
   isRequestSentByMe
+  ,
+  peopleAlsoViewed = [],
+  similarProfiles = [],
+  connectionCount
 }: UserProfileClientProps) {
   const router = useRouter()
   const [connectionStatus, setConnectionStatus] = useState(connection?.status || "NONE")
@@ -86,7 +93,7 @@ export default function UserProfileClient({
                           )}
                           <div className="flex items-center space-x-1">
                             <Users className="h-4 w-4" />
-                            <span>500+ connections</span>
+                            <span>{typeof connectionCount === 'number' ? `${connectionCount} connection${connectionCount === 1 ? '' : 's'}` : 'Connections'}</span>
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
@@ -248,6 +255,64 @@ export default function UserProfileClient({
                     <UserPlus className="h-4 w-4" />
                     <span className="text-sm">Not connected</span>
                   </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* People Also Viewed */}
+            <Card className="bg-white shadow-sm">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg font-semibold">People also viewed</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {peopleAlsoViewed.length === 0 ? (
+                  <p className="text-sm text-gray-500">No suggestions right now.</p>
+                ) : (
+                  peopleAlsoViewed.map((person) => (
+                    <Link href={`/${lang}/user/${person.id}`} key={person.id} className="flex items-center space-x-3 hover:bg-gray-50 p-1 rounded-md">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={getAvatarUrl(person.image, person.name)} />
+                        <AvatarFallback className="bg-gradient-to-r from-green-500 to-blue-500 text-white">
+                          {person.name.split(" ").map((n) => n[0]).join("").toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium text-sm">{person.name}</p>
+                        {person.headline && (
+                          <p className="text-xs text-gray-500">{person.headline}</p>
+                        )}
+                      </div>
+                    </Link>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Similar Profiles */}
+            <Card className="bg-white shadow-sm">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg font-semibold">Similar profiles</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {similarProfiles.length === 0 ? (
+                  <p className="text-sm text-gray-500">No similar profiles found.</p>
+                ) : (
+                  similarProfiles.map((person) => (
+                    <Link href={`/${lang}/user/${person.id}`} key={person.id} className="flex items-center space-x-3 hover:bg-gray-50 p-1 rounded-md">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={getAvatarUrl(person.image, person.name)} />
+                        <AvatarFallback className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white">
+                          {person.name.split(" ").map((n) => n[0]).join("").toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium text-sm">{person.name}</p>
+                        {person.headline && (
+                          <p className="text-xs text-gray-500">{person.headline}</p>
+                        )}
+                      </div>
+                    </Link>
+                  ))
                 )}
               </CardContent>
             </Card>

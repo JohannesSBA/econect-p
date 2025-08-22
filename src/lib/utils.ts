@@ -157,5 +157,10 @@ export type Dictionary = {
     jimma: string
     selectLocation: string
     selectExperience: string
+    accountType: string
+    employer: string
+    jobSeeker: string
+    companyName: string
+    website: string
   }
 }

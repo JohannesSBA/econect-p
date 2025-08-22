@@ -129,13 +129,16 @@ export default function SearchComponent() {
     
     switch (type) {
       case 'people':
-        router.push(`/profile/${id}`);
+        router.push(`/en/user/${id}`);
+        break;
+      case 'company':
+        router.push(`/en/company/${id}`);
         break;
       case 'jobs':
-        router.push(`/jobs/${id}`);
+        router.push(`/en/jobs/${id}`);
         break;
       case 'posts':
-        router.push(`/dashboard?post=${id}`);
+        router.push(`/en/dashboard?post=${id}`);
         break;
     }
   };
@@ -231,7 +234,7 @@ export default function SearchComponent() {
                     {results.people.map((person) => (
                       <div
                         key={person.id}
-                        onClick={() => handleResultClick('people', person.id)}
+                        onClick={() => handleResultClick(person.role === 'EMPLOYER' ? 'company' : 'people', person.id)}
                         className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 cursor-pointer"
                       >
                         <Avatar className="h-10 w-10">
@@ -365,7 +368,7 @@ export default function SearchComponent() {
           {results && results.totalResults > 0 && (
             <div className="border-t border-gray-100 px-4 py-2">
               <Link
-                href={`search?q=${encodeURIComponent(query)}&type=${searchType}`}
+                href={`/en/search?q=${encodeURIComponent(query)}&type=${searchType}`}
                 className="text-sm text-blue-600 hover:text-blue-700 font-medium"
               >
                 View all {results.totalResults} results →

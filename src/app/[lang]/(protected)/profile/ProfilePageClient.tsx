@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   Edit,
-  Plus,
   MapPin,
   Globe,
   Users,
@@ -23,13 +22,19 @@ import { ProfileEditModal } from "../components/ProfileEditModal"
 import ProfileImageUpload from "@/components/ProfileImageUpload"
 import { getAvatarUrl } from "@/lib/image-utils"
 import { useRouter } from "next/navigation"
+import { EditContentModal } from "../components/EditContentModal"
+import Link from "next/link"
 
 interface ProfilePageClientProps {
   lang: 'en' | 'am'
   userWithProfile: any
+  posts?: any[]
+  peopleAlsoViewed?: Array<{ id: string; name: string; image?: string | null; headline?: string | null; location?: string | null }>
+  similarProfiles?: Array<{ id: string; name: string; image?: string | null; headline?: string | null; location?: string | null }>
+  connectionCount?: number
 }
 
-export default function ProfilePageClient({ lang, userWithProfile }: ProfilePageClientProps) {
+export default function ProfilePageClient({ lang, userWithProfile, posts = [], peopleAlsoViewed = [], similarProfiles = [], connectionCount }: ProfilePageClientProps) {
   const [currentUser, setCurrentUser] = useState(userWithProfile)
   const router = useRouter()
 
@@ -81,10 +86,10 @@ export default function ProfilePageClient({ lang, userWithProfile }: ProfilePage
                               <span>{currentUser.location}</span>
                             </div>
                           )}
-                          <div className="flex items-center space-x-1">
+                          <Link href={`/${lang}/connects`} className="flex items-center space-x-1">
                             <Users className="h-4 w-4" />
-                            <span>500+ connections</span>
-                          </div>
+                            <span>{typeof connectionCount === 'number' ? `${connectionCount} connection${connectionCount === 1 ? '' : 's'}` : 'Connections'}</span>
+                          </Link>
                         </div>
                         <div className="flex items-center space-x-2">
                           <ProfileEditModal user={currentUser}>
@@ -93,9 +98,7 @@ export default function ProfilePageClient({ lang, userWithProfile }: ProfilePage
                               Edit Profile
                             </Button>
                           </ProfileEditModal>
-                          <Button size="sm" variant="outline">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
+                          
                         </div>
                       </div>
                     </div>
@@ -111,6 +114,74 @@ export default function ProfilePageClient({ lang, userWithProfile }: ProfilePage
               userId={currentUser.id}
               userName={currentUser.name}
             />
+
+            {/* Posts Section */}
+            <Card className="bg-white shadow-sm">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg font-semibold">Posts</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {posts && posts.length > 0 ? (
+                  <div className="space-y-4">
+                    {posts.map((post: any) => (
+                      <div key={post.id} className="border rounded-md p-4">
+                        <div className="flex items-center space-x-3 mb-2">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={getAvatarUrl(currentUser.image, currentUser.name)} />
+                            <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs">
+                              {currentUser.name?.split(" ").map((n: string) => n[0]).join("").toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1">
+                            <p className="font-medium text-sm">{currentUser.name}</p>
+                            <p className="text-xs text-gray-500">{new Date(post.createdAt).toLocaleString()}</p>
+                          </div>
+                        </div>
+                        {post.title && (
+                          <h4 className="font-semibold text-gray-900 mb-1">{post.title}</h4>
+                        )}
+                        <p className="text-gray-800 whitespace-pre-wrap">{post.content}</p>
+                        {/* Images */}
+                        {(() => {
+                          const imgs: string[] = (Array.isArray(post.images) && post.images.length > 0)
+                            ? post.images
+                            : (post.imageUrl ? [post.imageUrl] : [])
+                          if (!imgs || imgs.length === 0) return null
+                          if (imgs.length === 1) {
+                            return (
+                              <div className="mt-3">
+                                <img
+                                  src={imgs[0]}
+                                  alt="Post image"
+                                  className="w-1/2 max-h-[480px] object-cover rounded-lg border"
+                                  loading="lazy"
+                                />
+                              </div>
+                            )
+                          }
+                          const gridCols = imgs.length === 2 ? "grid-cols-2" : "grid-cols-3"
+                          return (
+                            <div className={`mt-3 grid ${gridCols} gap-2`}>
+                              {imgs.map((url, idx) => (
+                                <img
+                                  key={url}
+                                  src={url}
+                                  alt={`Post image ${idx + 1}`}
+                                  className="w-full h-56 object-cover rounded-lg border"
+                                  loading="lazy"
+                                />
+                              ))}
+                            </div>
+                          )
+                        })()}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-center">No posts yet.</p>
+                )}
+              </CardContent>
+            </Card>
 
             {/* About Section */}
             <Card className="bg-white shadow-sm">
@@ -137,9 +208,7 @@ export default function ProfilePageClient({ lang, userWithProfile }: ProfilePage
                     <Briefcase className="h-5 w-5 text-gray-600" />
                     <CardTitle className="text-lg font-semibold">Experience</CardTitle>
                   </div>
-                  <Button variant="ghost" size="sm">
-                    <Plus className="h-4 w-4" />
-                  </Button>
+                  <EditContentModal type="experience" user={{...currentUser, skills: []}} />
                 </div>
               </CardHeader>
               <CardContent>
@@ -173,9 +242,7 @@ export default function ProfilePageClient({ lang, userWithProfile }: ProfilePage
                     <GraduationCap className="h-5 w-5 text-gray-600" />
                     <CardTitle className="text-lg font-semibold">Education</CardTitle>
                   </div>
-                  <Button variant="ghost" size="sm">
-                    <Plus className="h-4 w-4" />
-                  </Button>
+                  <EditContentModal type="education" user={{...currentUser, skills: []}} />
                 </div>
               </CardHeader>
               <CardContent>
@@ -205,9 +272,7 @@ export default function ProfilePageClient({ lang, userWithProfile }: ProfilePage
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg font-semibold">Skills</CardTitle>
-                  <Button variant="ghost" size="sm">
-                    <Plus className="h-4 w-4" />
-                  </Button>
+                  <EditContentModal type="skills" user={{...currentUser, skills: []}} />
                 </div>
               </CardHeader>
               <CardContent>
@@ -299,39 +364,26 @@ export default function ProfilePageClient({ lang, userWithProfile }: ProfilePage
                 <CardTitle className="text-lg font-semibold">People also viewed</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="flex items-center space-x-3">
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback className="bg-gradient-to-r from-green-500 to-blue-500 text-white">
-                      JS
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium text-sm">Jane Smith</p>
-                    <p className="text-xs text-gray-500">Product Manager at Tech Corp</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback className="bg-gradient-to-r from-purple-500 to-pink-500 text-white">
-                      MJ
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium text-sm">Mike Johnson</p>
-                    <p className="text-xs text-gray-500">Senior Developer at Startup Inc</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
-                      SB
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium text-sm">Sarah Brown</p>
-                    <p className="text-xs text-gray-500">UX Designer at Design Co</p>
-                  </div>
-                </div>
+                {peopleAlsoViewed.length === 0 ? (
+                  <p className="text-sm text-gray-500">No suggestions right now.</p>
+                ) : (
+                  peopleAlsoViewed.map((person) => (
+                    <Link href={`/${lang}/user/${person.id}`} key={person.id} className="flex items-center space-x-3 hover:bg-gray-50 p-1 rounded-md">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={getAvatarUrl(person.image, person.name)} />
+                        <AvatarFallback className="bg-gradient-to-r from-green-500 to-blue-500 text-white">
+                          {person.name.split(" ").map((n) => n[0]).join("").toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium text-sm">{person.name}</p>
+                        {person.headline && (
+                          <p className="text-xs text-gray-500">{person.headline}</p>
+                        )}
+                      </div>
+                    </Link>
+                  ))
+                )}
               </CardContent>
             </Card>
 
@@ -341,30 +393,38 @@ export default function ProfilePageClient({ lang, userWithProfile }: ProfilePage
                 <CardTitle className="text-lg font-semibold">Similar profiles</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="flex items-center space-x-3">
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white">
-                      AL
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium text-sm">Alex Lee</p>
-                    <p className="text-xs text-gray-500">Software Engineer</p>
-                    <p className="text-xs text-blue-600">2 mutual connections</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback className="bg-gradient-to-r from-teal-500 to-cyan-500 text-white">
-                      RW
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium text-sm">Rachel Wilson</p>
-                    <p className="text-xs text-gray-500">Full Stack Developer</p>
-                    <p className="text-xs text-blue-600">5 mutual connections</p>
-                  </div>
-                </div>
+                {similarProfiles.length === 0 ? (
+                  <p className="text-sm text-gray-500">No similar profiles found.</p>
+                ) : (
+                  similarProfiles.map((person) => (
+                    <Link href={`/${lang}/user/${person.id}`} key={person.id} className="flex items-center space-x-3 hover:bg-gray-50 p-1 rounded-md">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={getAvatarUrl(person.image, person.name)} />
+                        <AvatarFallback className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white">
+                          {person.name.split(" ").map((n) => n[0]).join("").toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium text-sm">{person.name}</p>
+                        {person.headline && (
+                          <p className="text-xs text-gray-500">{person.headline}</p>
+                        )}
+                      </div>
+                    </Link>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Applications Link */}
+            <Card className="bg-white shadow-sm">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg font-semibold">Your applications</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Link href={`/${lang}/jobs/applied`} className="text-blue-600 hover:underline text-sm">
+                  View all jobs you applied to
+                </Link>
               </CardContent>
             </Card>
           </div>

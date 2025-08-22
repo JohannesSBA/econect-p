@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma"
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const currentUser = await getCurrentUser()
@@ -13,7 +13,8 @@ export async function PUT(
     }
 
     // Only allow users to update their own profile
-    if (currentUser.id !== params.id) {
+    const { id } = await params
+    if (currentUser.id !== id) {
       return NextResponse.json({ message: "Forbidden" }, { status: 403 })
     }
 
@@ -22,7 +23,7 @@ export async function PUT(
 
     // Update user profile
     const updatedUser = await prisma.user.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         name: name || undefined,
         headline: headline || undefined,
@@ -53,7 +54,7 @@ export async function PUT(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const currentUser = await getCurrentUser()
@@ -61,8 +62,9 @@ export async function GET(
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
 
+    const { id } = await params
     const user = await prisma.user.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         id: true,
         name: true,

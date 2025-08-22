@@ -88,6 +88,12 @@ async function main() {
           email: `hr@${company.toLowerCase().replace(' ', '')}.et`,
           role: 'EMPLOYER',
           password: 'password123',
+          employerProfile: {
+            create: {
+              companyName: company,
+              website: `https://${company.toLowerCase().replace(' ', '')}.et`
+            }
+          }
         },
       })
     )
@@ -180,10 +186,28 @@ async function main() {
           salary: `${5000 + j * 1000}`,
           jobType: JOB_TYPES[j % JOB_TYPES.length] as any,
           employerId: employer.id,
+          isPublished: true,
         },
       })
       jobListings.push(job)
     }
+  }
+
+  // Create a paid payment and mark a job published for demo
+  if (employers.length > 0 && jobListings.length > 0) {
+    await prisma.payment.create({
+      data: {
+        employerId: employers[0].id,
+        jobId: jobListings[0].id,
+        amount: 50000,
+        currency: 'ETB',
+        reference: `seed_${jobListings[0].id}`,
+        status: 'PAID',
+        provider: 'chapa',
+        metadata: { seeded: true },
+      }
+    })
+    await prisma.jobListing.update({ where: { id: jobListings[0].id }, data: { isPublished: true, status: 'OPEN', publishedAt: new Date() } })
   }
 
   // Create job applications

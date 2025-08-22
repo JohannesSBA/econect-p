@@ -3,7 +3,7 @@ import Header from "../../components/Header"
 import { getCurrentUser } from "@/lib/getCurrentUser"
 import { User } from "@/../types/prisma"
 import prisma from "@/lib/prisma"
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 import Link from "next/link"
 import UserProfileClient from "./UserProfileClient"
 
@@ -42,17 +42,7 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
 
   // Don't show own profile here - redirect to own profile page
   if (currentUser.id === user.id) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">This is your own profile</h1>
-          <p className="text-gray-600 mb-4">You're viewing your own profile. Use the edit functionality on your profile page.</p>
-          <Link href={`/${lang}/profile`}>
-            <Button>Go to My Profile</Button>
-          </Link>
-        </div>
-      </div>
-    )
+    redirect(`/${lang}/profile`)
   }
 
   // Check connection status
@@ -69,6 +59,62 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
   const hasPendingRequest = connection?.status === 'PENDING'
   const isRequestSentByMe = hasPendingRequest && connection.senderId === currentUser.id
 
+  // Real connection count for viewed user
+  const connectionCount = await prisma.connection.count({
+    where: {
+      status: 'ACCEPTED',
+      OR: [
+        { senderId: user.id },
+        { receiverId: user.id }
+      ]
+    }
+  })
+
+  // Suggestions relative to the viewed user
+  const peopleAlsoViewed = await prisma.user.findMany({
+    where: {
+      id: { notIn: [currentUser.id, user.id] },
+    },
+    select: {
+      id: true,
+      name: true,
+      image: true,
+      headline: true,
+      location: true
+    },
+    take: 6,
+    orderBy: { createdAt: 'desc' }
+  })
+
+  const targetSkillIds = (user.profile?.skills || []).map((s: any) => s.skillId).filter(Boolean)
+  const targetSchools = (user.profile?.education || []).map((e: any) => e.school).filter(Boolean)
+
+  const similarProfiles = await prisma.user.findMany({
+    where: {
+      AND: [
+        { id: { notIn: [currentUser.id, user.id] } },
+        {
+          OR: [
+            targetSkillIds.length > 0
+              ? { profile: { skills: { some: { skillId: { in: targetSkillIds } } } } }
+              : undefined,
+            targetSchools.length > 0
+              ? { profile: { education: { some: { school: { in: targetSchools } } } } }
+              : undefined,
+          ].filter(Boolean) as any
+        }
+      ]
+    },
+    select: {
+      id: true,
+      name: true,
+      image: true,
+      headline: true,
+      location: true
+    },
+    take: 6
+  })
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header lang={lang} user={currentUser} />
@@ -81,6 +127,9 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
         isConnected={isConnected}
         hasPendingRequest={hasPendingRequest}
         isRequestSentByMe={isRequestSentByMe}
+        connectionCount={connectionCount}
+        peopleAlsoViewed={peopleAlsoViewed as any}
+        similarProfiles={similarProfiles as any}
       />
     </div>
   )

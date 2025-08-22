@@ -90,5 +90,33 @@
   "footer": {
     "description": "Qophii hojii wajjin Itoophiyaa mara wal qunnamsiisna. Imala hojii keessan asii irraa eegala.",
     "copyright": "© 2024 Econnect. Mirgi hundi kan qabamu. Itoophiyaa keessatti ❤️ wajjin kan hojjetamedha."
+  },
+  "register": {
+    "accountType": "Gosa Herrega",
+    "employer": "Hojjetaa baasaa",
+    "jobSeeker": "Hojii barbaadaa",
+    "companyName": "Maqaa Kaampaanii",
+    "website": "Wixinee"
+  },
+  "employer": {
+    "dashboard": {
+      "title": "Daashboordii Hojjettoota",
+      "postJob": "Hojii maxxansi",
+      "noJobs": "Hojii hin jiru"
+    },
+    "newJob": {
+      "title": "Hojii Uumi",
+      "jobTitle": "Maqaa Hojii",
+      "company": "Kaampaanii",
+      "location": "Bakka",
+      "description": "Ibsa",
+      "continueToPayment": "Gara Kaffaltii itti fufi",
+      "processing": "Hojii irra jira..."
+    },
+    "paywall": {
+      "pending": "Kaffaltiin eeggamaa jirti...",
+      "failed": "Kaffaltiin hin milkaa'in",
+      "paid": "Kaffaltiin milkaa'e"
+    }
   }
 }

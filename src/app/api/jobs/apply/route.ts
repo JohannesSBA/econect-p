@@ -8,6 +8,9 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
+    if (user.role !== 'JOB_SEEKER') {
+      return NextResponse.json({ message: "Forbidden" }, { status: 403 })
+    }
 
     const body = await request.json()
     const { jobId, userId, coverLetter, resumeUrl } = body
@@ -30,7 +33,7 @@ export async function POST(request: NextRequest) {
     const existingApplication = await prisma.jobApplication.findUnique({
       where: {
         userId_jobId: {
-          userId: userId,
+          userId: user.id,
           jobId: jobId
         }
       }
@@ -43,7 +46,7 @@ export async function POST(request: NextRequest) {
     // Create the application
     const application = await prisma.jobApplication.create({
       data: {
-        userId: userId,
+        userId: user.id,
         jobId: jobId,
         coverLetter: coverLetter || null,
         resumeUrl: resumeUrl,

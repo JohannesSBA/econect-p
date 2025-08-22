@@ -122,12 +122,14 @@ export default async function JobPage({
             <Card className="bg-white shadow-sm">
               <CardContent className="p-6">
                 <div className="flex items-start space-x-4">
-                  <Avatar className="h-16 w-16">
+                  <Link href={`/${lang}/company/${job.employer.id}`}>
+                    <Avatar className="h-16 w-16">
                     <AvatarImage src={getCompanyLogoUrl(job.employer.image, job.employer.name)} />
                     <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-500 text-white text-lg">
                       {job.employer.name.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
+                  </Link>
                   
                   <div className="flex-1">
                     <div className="flex items-start justify-between">
