@@ -8,9 +8,11 @@ export function getImageUrl(imageUrl?: string | null, fallback?: string): string
     return imageUrl
   }
 
-  // If it's an S3 key, construct the full URL
+  // If it's an S3 key, construct the full URL using public env
   if (imageUrl.includes('/') && !imageUrl.startsWith('http')) {
-    return `https://${process.env.BUCKET_NAME}.s3.us-east-1.amazonaws.com/${imageUrl}`
+    const bucket = (process.env.NEXT_PUBLIC_S3_BUCKET || "").trim()
+    const region = (process.env.NEXT_PUBLIC_S3_REGION || 'us-east-1').trim()
+    if (bucket) return `https://${bucket}.s3.${region}.amazonaws.com/${imageUrl}`
   }
 
   // Fallback to placeholder

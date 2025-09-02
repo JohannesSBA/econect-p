@@ -37,6 +37,7 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
   const [experienceForm, setExperienceForm] = useState({
     jobTitle: "",
     company: "",
+    companyUserId: "",
     location: "",
     employmentType: "",
     startDate: new Date(),
@@ -44,6 +45,9 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
     description: "",
     current: false,
   })
+  const [companyQuery, setCompanyQuery] = useState("")
+  const [companyOptions, setCompanyOptions] = useState<Array<{ id: string; name: string }>>([])
+  const [companyLoading, setCompanyLoading] = useState(false)
   const [educationForm, setEducationForm] = useState({
     school: "",
     degreeType: "",
@@ -267,8 +271,51 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
                     placeholder="e.g. Econnect"
                     className="mt-1"
                     value={experienceForm.company}
-                    onChange={(e) => setExperienceForm({ ...experienceForm, company: e.target.value })}
+                    onChange={(e) => {
+                      setExperienceForm({ ...experienceForm, company: e.target.value, companyUserId: "" })
+                      const v = e.target.value
+                      setCompanyQuery(v)
+                      if (v.trim().length >= 2) {
+                        setCompanyLoading(true)
+                        fetch(`/api/company/search?q=${encodeURIComponent(v)}`)
+                          .then(r => r.json())
+                          .then((res) => setCompanyOptions(res?.companies || []))
+                          .catch(() => setCompanyOptions([]))
+                          .finally(() => setCompanyLoading(false))
+                      } else {
+                        setCompanyOptions([])
+                      }
+                    }}
                   />
+                  {companyQuery.trim().length >= 2 && (
+                    <div className="relative">
+                      <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded shadow-sm max-h-48 overflow-auto">
+                        {companyLoading ? (
+                          <div className="p-2 text-sm text-gray-500">Searching...</div>
+                        ) : (
+                          <>
+                            {companyOptions.map((c) => (
+                              <button
+                                type="button"
+                                key={c.id}
+                                className="w-full text-left px-3 py-2 hover:bg-gray-50"
+                                onClick={() => {
+                                  setExperienceForm({ ...experienceForm, company: c.name, companyUserId: c.id })
+                                  setCompanyQuery("")
+                                  setCompanyOptions([])
+                                }}
+                              >
+                                {c.name}
+                              </button>
+                            ))}
+                            {companyOptions.length === 0 && (
+                              <div className="p-2 text-sm text-gray-500">No results. Keep typing…</div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

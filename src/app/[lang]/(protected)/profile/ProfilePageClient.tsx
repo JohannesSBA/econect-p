@@ -18,12 +18,12 @@ import {
   GraduationCap,
 } from "lucide-react"
 import Header from "../components/Header"
+import Link from "next/link"
 import { ProfileEditModal } from "../components/ProfileEditModal"
 import ProfileImageUpload from "@/components/ProfileImageUpload"
 import { getAvatarUrl } from "@/lib/image-utils"
 import { useRouter } from "next/navigation"
 import { EditContentModal } from "../components/EditContentModal"
-import Link from "next/link"
 
 interface ProfilePageClientProps {
   lang: 'en' | 'am'
@@ -32,9 +32,11 @@ interface ProfilePageClientProps {
   peopleAlsoViewed?: Array<{ id: string; name: string; image?: string | null; headline?: string | null; location?: string | null }>
   similarProfiles?: Array<{ id: string; name: string; image?: string | null; headline?: string | null; location?: string | null }>
   connectionCount?: number
+  savedPosts?: Array<any>
+  savedJobs?: Array<any>
 }
 
-export default function ProfilePageClient({ lang, userWithProfile, posts = [], peopleAlsoViewed = [], similarProfiles = [], connectionCount }: ProfilePageClientProps) {
+export default function ProfilePageClient({ lang, userWithProfile, posts = [], peopleAlsoViewed = [], similarProfiles = [], connectionCount, savedPosts = [], savedJobs = [] }: ProfilePageClientProps) {
   const [currentUser, setCurrentUser] = useState(userWithProfile)
   const router = useRouter()
 
@@ -68,7 +70,7 @@ export default function ProfilePageClient({ lang, userWithProfile, posts = [], p
             <Card className="bg-white shadow-sm">
               <CardContent className="p-6">
                 <div className="flex items-start space-x-6">
-                  <Avatar className="h-24 w-24">
+                  <Avatar className="h-20 w-20 md:h-24 md:w-24">
                     <AvatarImage src={getAvatarUrl(currentUser.image, currentUser.name)} />
                     <AvatarFallback className="text-2xl bg-gradient-to-r from-blue-500 to-purple-500 text-white">
                       {currentUser.name?.split(" ").map((n: string) => n[0]).join("").toUpperCase()}
@@ -167,7 +169,7 @@ export default function ProfilePageClient({ lang, userWithProfile, posts = [], p
                                   key={url}
                                   src={url}
                                   alt={`Post image ${idx + 1}`}
-                                  className="w-full h-56 object-cover rounded-lg border"
+                                  className="w-full h-40 md:h-56 object-cover rounded-lg border"
                                   loading="lazy"
                                 />
                               ))}
@@ -179,6 +181,62 @@ export default function ProfilePageClient({ lang, userWithProfile, posts = [], p
                   </div>
                 ) : (
                   <p className="text-gray-500 text-center">No posts yet.</p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Saved Posts */}
+            <Card className="bg-white shadow-sm">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg font-semibold">Saved Posts</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {savedPosts.length > 0 ? (
+                  <div className="space-y-4">
+                    {savedPosts.map((bp: any) => (
+                      <div key={bp.id} className="border border-gray-200 rounded-lg p-4">
+                        <div className="flex items-center space-x-3 mb-2">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={getAvatarUrl(bp.post.author.image, bp.post.author.name)} />
+                            <AvatarFallback>{bp.post.author.name?.charAt(0)?.toUpperCase() || 'U'}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="font-medium text-gray-900">{bp.post.author.name}</div>
+                            <div className="text-xs text-gray-500">{new Date(bp.post.createdAt).toLocaleString()}</div>
+                          </div>
+                        </div>
+                        <div className="text-gray-800 whitespace-pre-wrap">{bp.post.content}</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-center">No saved posts.</p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Saved Jobs */}
+            <Card className="bg-white shadow-sm">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg font-semibold">Saved Jobs</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {savedJobs.length > 0 ? (
+                  <div className="space-y-3">
+                    {savedJobs.map((bj: any) => (
+                      <div key={bj.id} className="border border-gray-200 rounded-lg p-4 flex items-center justify-between">
+                        <div>
+                          <div className="font-semibold text-gray-900">{bj.job.title}</div>
+                          <div className="text-sm text-gray-600">{bj.job.company} • {bj.job.location}</div>
+                        </div>
+                        <Link href={`/${lang}/jobs/${bj.job.id}`}>
+                          <Button size="sm" variant="outline">View</Button>
+                        </Link>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-center">No saved jobs.</p>
                 )}
               </CardContent>
             </Card>
@@ -217,7 +275,15 @@ export default function ProfilePageClient({ lang, userWithProfile, posts = [], p
                     {currentUser.profile.experiences.map((experience: any) => (
                       <div key={experience.id} className="border-l-4 border-blue-500 pl-4">
                         <h4 className="font-semibold text-gray-900">{experience.jobTitle}</h4>
-                        <p className="text-gray-600">{experience.company}</p>
+                        <p className="text-gray-600">
+                          {experience.companyUserId ? (
+                            <Link href={`/${lang}/company/${experience.companyUserId}`} className="text-blue-600 hover:underline">
+                              {experience.company}
+                            </Link>
+                          ) : (
+                            experience.company
+                          )}
+                        </p>
                         <p className="text-sm text-gray-500">
                           {new Date(experience.startDate).toLocaleDateString()} - 
                           {experience.current ? 'Present' : experience.endDate ? new Date(experience.endDate).toLocaleDateString() : ''}

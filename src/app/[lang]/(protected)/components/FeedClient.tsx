@@ -18,6 +18,7 @@ interface PostShape {
   likes?: Array<{ id: string; userId?: string }>
   comments?: Array<{ id: string; content: string; createdAt: string; user: PostCommentUser }>
   images?: string[]
+  bookmarks?: Array<{ id: string }>
 }
 
 export function FeedClient({ initialPosts, user }: { initialPosts: PostShape[]; user: User }) {
@@ -53,6 +54,7 @@ export function FeedClient({ initialPosts, user }: { initialPosts: PostShape[]; 
     content: (post as any).content,
     type: (post as any).type ?? "TEXT",
     linkUrl: (post as any).linkUrl ?? undefined,
+    images: Array.isArray((post as any).images) ? (post as any).images : ((post as any).imageUrl ? [(post as any).imageUrl] : []),
     author: {
       id: post.author.id,
       name: post.author.name,
@@ -73,7 +75,7 @@ export function FeedClient({ initialPosts, user }: { initialPosts: PostShape[]; 
     })),
     shares: 0,
     isLiked: false,
-    isBookmarked: false,
+    isBookmarked: Array.isArray((post as any).bookmarks) ? ((post as any).bookmarks.length > 0) : false,
   })), [posts])
 
   return (

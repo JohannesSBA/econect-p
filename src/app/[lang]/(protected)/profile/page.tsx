@@ -20,16 +20,19 @@ export default async function ProfilePage({ params }: { params: Promise<{ lang: 
   // Fetch user with profile data
   const userWithProfile = await prisma.user.findUnique({
     where: { id: currentUser.id },
-    include: {
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      image: true,
+      headline: true,
+      role: true,
+      createdAt: true,
       profile: {
         include: {
           experiences: true,
           education: true,
-          skills: {
-            include: {
-              skill: true
-            }
-          }
+          skills: { include: { skill: true } },
         }
       }
     }
@@ -68,6 +71,33 @@ export default async function ProfilePage({ params }: { params: Promise<{ lang: 
     },
     orderBy: { createdAt: 'desc' }
   })
+
+  // Fetch saved posts/jobs (optional if bookmark tables exist)
+  const db: any = prisma as any
+  let savedPosts: any[] = []
+  let savedJobs: any[] = []
+  try {
+    savedPosts = await db.postBookmark.findMany({
+      where: { userId: currentUser.id },
+      include: {
+        post: {
+          include: {
+            author: { select: { id: true, name: true, image: true, headline: true } },
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+  } catch {}
+  try {
+    savedJobs = await db.jobBookmark.findMany({
+      where: { userId: currentUser.id },
+      include: {
+        job: true,
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+  } catch {}
 
   // Suggestions: People also viewed (users not connected to the current user)
   const peopleAlsoViewed = await prisma.user.findMany({
@@ -168,5 +198,5 @@ export default async function ProfilePage({ params }: { params: Promise<{ lang: 
     }
   })
 
-  return <ProfilePageClient lang={lang} userWithProfile={userWithProfile} posts={posts as any} peopleAlsoViewed={peopleAlsoViewed as any} similarProfiles={similarProfiles as any} connectionCount={connectionCount} />
+  return <ProfilePageClient lang={lang} userWithProfile={userWithProfile} posts={posts as any} peopleAlsoViewed={peopleAlsoViewed as any} similarProfiles={similarProfiles as any} connectionCount={connectionCount} savedPosts={savedPosts as any} savedJobs={savedJobs as any} />
 }

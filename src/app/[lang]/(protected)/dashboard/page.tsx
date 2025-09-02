@@ -33,6 +33,7 @@ interface PostWithAuthor {
   likes: Array<{ id: string }>
   comments: Array<{ id: string }>
   images?: string[]
+  bookmarks?: Array<{ id: string }>
 }
 
 export default async function DashboardPage({ params }: { params: Promise<{ lang: 'en' | 'am' }> }) {
@@ -55,31 +56,56 @@ export default async function DashboardPage({ params }: { params: Promise<{ lang
     }
 
     // Fetch posts with author information and engagement data
-    const posts = await prisma.post.findMany({
-      include: {
-        author: {
-          select: {
-            id: true,
-            name: true,
-            image: true,
-            headline: true,
-          }
-        },
-        likes: true,
-        comments: {
-          include: {
-            user: {
-              select: { id: true, name: true, image: true }
+    let posts: PostWithAuthor[]
+    try {
+      posts = await prisma.post.findMany({
+        include: {
+          author: {
+            select: {
+              id: true,
+              name: true,
+              image: true,
+              headline: true,
             }
           },
-          orderBy: { createdAt: 'asc' }
+          likes: true,
+          comments: {
+            include: {
+              user: {
+                select: { id: true, name: true, image: true }
+              }
+            },
+            orderBy: { createdAt: 'asc' }
+          },
+          bookmarks: {
+            where: { userId: user.id },
+            select: { id: true }
+          },
         },
-      },
-      orderBy: {
-        createdAt: 'desc'
-      },
-      take: 10
-    }) as PostWithAuthor[]
+        orderBy: {
+          createdAt: 'desc'
+        },
+        take: 10
+      }) as PostWithAuthor[]
+    } catch {
+      // Fallback for environments where PostBookmark table is not yet present
+      posts = await prisma.post.findMany({
+        include: {
+          author: {
+            select: { id: true, name: true, image: true, headline: true }
+          },
+          likes: true,
+          comments: {
+            include: { user: { select: { id: true, name: true, image: true } } },
+            orderBy: { createdAt: 'asc' }
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 10
+      }) as PostWithAuthor[]
+      // ensure bookmarks field exists for type safety
+      posts = posts.map(p => ({ ...p, bookmarks: [] }))
+    }
 
     // Fetch user's connections count
     const connectionsCount = await prisma.connection.count({
@@ -105,11 +131,11 @@ export default async function DashboardPage({ params }: { params: Promise<{ lang
       <Header lang={lang} user={user
       } />
 
-      <div className="container mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="container mx-auto max-w-6xl px-4 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 md:gap-8">
           {/* Left Sidebar */}
-          <div className="lg:col-span-1 md:sticky top-20 self-start">
-            <Card className="bg-white shadow-sm mb-6">
+          <div className="lg:col-span-1 md:sticky top-20 self-start space-y-6">
+            <Card className="bg-white shadow-sm">
               <CardHeader className="pb-4">
                 <h2 className="text-lg font-semibold text-gray-900">Manage Network</h2>
               </CardHeader>

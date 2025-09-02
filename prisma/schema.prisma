@@ -113,6 +113,7 @@ model User {
   
   // Bookmarks
   bookmarkedJobs JobBookmark[]
+  postBookmarks  PostBookmark[]
   
   //Chat
   messagesSent         Message[]    @relation("messagesSent")
@@ -126,6 +127,7 @@ model User {
   messageReactions    MessageReaction[]   @relation("UserReactions")
   onlineStatus        UserOnlineStatus?   @relation("UserOnlineStatus")
   typingIndicators    TypingIndicator[]   @relation("UserTyping")
+  companyExperiences  Experience[]        @relation("CompanyUserExperiences")
   // Employer profile
   employerProfile     EmployerProfile?
   payments            Payment[]
@@ -304,6 +306,8 @@ model Experience {
 
   jobTitle             String
   company              String
+  companyUserId        String?
+  companyUser          User?                @relation("CompanyUserExperiences", fields: [companyUserId], references: [id])
   location             String?
   employmentType       String?
   startDate            DateTime
@@ -314,6 +318,7 @@ model Experience {
   updatedAt            DateTime             @updatedAt
 
   @@index([jobSeekerProfileId])
+  @@index([companyUserId])
 }
 
 model Education {

@@ -182,6 +182,14 @@ export function PostCard({ post, user }: PostCardProps) {
         {/* Post Content */}
         <div className="mb-4">
           <p className="text-gray-800 mb-2 whitespace-pre-wrap">{post.content}</p>
+          {post.type === "IMAGE" && Array.isArray((post as any).images) && (post as any).images.length > 0 && (
+            <div className={`grid ${((post as any).images.length === 2 ? 'grid-cols-2' : (post as any).images.length >= 3 ? 'grid-cols-3' : 'grid-cols-1')} gap-2 mt-2`}>
+              {(post as any).images.slice(0,3).map((url: string, idx: number) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img key={idx} src={url} alt={`post-image-${idx+1}`} className="w-full h-48 object-cover rounded-lg border" loading="lazy" />
+              ))}
+            </div>
+          )}
           {post.type === "LINK" && post.linkUrl && (
             <div className="mt-3 p-3 border border-gray-200 rounded-lg">
               <div className="flex items-center space-x-2">
@@ -232,7 +240,7 @@ export function PostCard({ post, user }: PostCardProps) {
             }`}
           >
             <Bookmark className="h-5 w-5" />
-            <span className="text-sm">Save</span>
+            <span className="text-sm">{isBookmarked ? 'Saved' : 'Save'}</span>
           </button>
         </div>
 
