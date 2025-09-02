@@ -12,8 +12,8 @@ export async function POST(req: Request) {
     prisma.user.findUnique({ where: { email } }),
     prisma.user.findUnique({ where: { phone } }),
   ])
-  if (byEmail)  return NextResponse.json({ error: 'Email already in use' }, { status: 400 })
-  if (byPhone) return NextResponse.json({ error: 'Phone already in use' }, { status: 400 })
+  if (byEmail)  return NextResponse.json({ error: 'Email already in use' }, { status: 409 })
+  if (byPhone) return NextResponse.json({ error: 'Phone already in use' }, { status: 409 })
 
   // 2) Generate 6-digit OTP
   const otp       = Math.floor(100000 + Math.random() * 900000).toString()

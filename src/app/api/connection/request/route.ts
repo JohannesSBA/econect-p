@@ -24,6 +24,15 @@ export async function POST(req: NextRequest) {
   const conn = await prisma.connection.create({
     data: { senderId: user.id, receiverId: userId, status: "PENDING" },
   });
-  // Optionally: create notification for receiver
+  // Notify receiver
+  await prisma.notification.create({
+    data: {
+      userId: userId,
+      type: 'CONNECTION_REQUEST',
+      title: 'New connection request',
+      message: `${user.name} sent you a connection request`,
+      data: { senderId: user.id },
+    },
+  });
   return NextResponse.json(conn);
 }

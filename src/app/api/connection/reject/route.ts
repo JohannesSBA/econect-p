@@ -19,7 +19,16 @@ export async function POST(req: NextRequest) {
     where: { id: conn.id },
     data: { status: "REJECTED" },
   });
-  // Optionally: create notification for sender
+  // Notify sender
+  await prisma.notification.create({
+    data: {
+      userId: userId,
+      type: 'CONNECTION_REQUEST',
+      title: 'Connection rejected',
+      message: `${user.name} rejected your connection request`,
+      data: { receiverId: user.id },
+    }
+  })
   return NextResponse.json(updated);
 }
 

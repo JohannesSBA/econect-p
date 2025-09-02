@@ -2,18 +2,12 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import {
   Search,
   Users,
   UserPlus,
-  MapPin,
   Filter,
-  Check,
-  X,
-  MessageSquare,
-  Clock,
 } from "lucide-react"
 import Link from "next/link"
 import Header from "../components/Header"
@@ -21,6 +15,7 @@ import { getCurrentUser } from "@/lib/getCurrentUser"
 import { User } from "@/../types/prisma"
 import prisma from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
+import PendingRequestsClient from "./PendingRequestsClient"
 
 export default async function PendingRequestsPage({ params }: { params: Promise<{ lang: 'en' | 'am' }> }) {
   const { lang } = await params
@@ -85,21 +80,7 @@ export default async function PendingRequestsPage({ params }: { params: Promise<
     }
   })
 
-  async function handleAcceptRequest(id: string): Promise<void> {
-    await prisma.connection.update({
-      where: { id },
-      data: { status: 'ACCEPTED' }
-    })
-    revalidatePath('/en/pending-requests')
-    }
-
-  async function handleDeclineRequest(id: string): Promise<void> {
-    await prisma.connection.update({
-      where: { id },
-      data: { status: 'REJECTED' }
-    })
-    revalidatePath('/en/pending-requests')
-  }
+  // Server actions removed; handled in client via API routes
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -115,14 +96,14 @@ export default async function PendingRequestsPage({ params }: { params: Promise<
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Link href="/pending-requests" className="flex items-center space-x-2 p-2 rounded-lg bg-blue-50 text-blue-700">
+                  <Link href={`/${lang}/pending-requests`} className="flex items-center space-x-2 p-2 rounded-lg bg-blue-50 text-blue-700">
                     <Users className="h-4 w-4" />
                     <span className="text-sm font-medium">Received</span>
                     <Badge variant="secondary" className="ml-auto bg-blue-100 text-blue-700">
                       {receivedRequests.length}
                     </Badge>
                   </Link>
-                  <Link href="/pending-requests?type=sent" className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-50 text-gray-700">
+                  <Link href={`/${lang}/pending-requests?type=sent`} className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-50 text-gray-700">
                     <UserPlus className="h-4 w-4" />
                     <span className="text-sm">Sent</span>
                     <Badge variant="secondary" className="ml-auto bg-gray-100 text-gray-700">
@@ -189,122 +170,11 @@ export default async function PendingRequestsPage({ params }: { params: Promise<
               </CardContent>
             </Card>
 
-            {/* Received Requests */}
-            <Card className="bg-white shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold">Received Requests</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {receivedRequests.map((request) => (
-                  <div key={request.id} className="flex items-center space-x-4 p-4 border border-gray-200 rounded-lg hover:border-blue-300 transition-colors">
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage src={request.sender.image || "/placeholder.svg?height=48&width=48"} />
-                      <AvatarFallback className="bg-gradient-to-r from-green-500 to-blue-500 text-white">
-                        {request.sender.name.split(" ").map((n: string) => n[0]).join("").toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h3 className="font-semibold text-gray-900">{request.sender.name}</h3>
-                          <p className="text-gray-600 text-sm">{request.sender.headline}</p>
-                          <div className="flex items-center space-x-4 mt-1 text-xs text-gray-500">
-                            {request.sender.location && (
-                              <>
-                                <div className="flex items-center space-x-1">
-                                  <MapPin className="h-3 w-3" />
-                                  <span>{request.sender.location}</span>
-                                </div>
-                                <span>•</span>
-                              </>
-                            )}
-                            <span>{new Date(request.createdAt).toLocaleDateString()}</span>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center space-x-3 mt-4">
-                        <Button 
-                          variant="default" 
-                          className="bg-blue-600 hover:bg-blue-700 text-white" 
-                          onClick={() => handleAcceptRequest(request.id)}
-                        >
-                          <Check className="h-4 w-4 mr-1" />
-                          Accept
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          onClick={() => handleDeclineRequest(request.id)}
-                        >
-                          <X className="h-4 w-4 mr-1" />
-                          Decline
-                        </Button>
-                        <Button size="sm" variant="outline">
-                          <MessageSquare className="h-4 w-4 mr-1" />
-                          Message
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-
-            {/* Sent Requests */}
-            <Card className="bg-white shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold">Sent Requests</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {sentRequests.map((request) => (
-                  <div key={request.id} className="flex items-start space-x-4 p-4 border border-gray-200 rounded-lg">
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage src={request.receiver.image || "/placeholder.svg?height=48&width=48"} />
-                      <AvatarFallback className="bg-gradient-to-r from-purple-500 to-pink-500 text-white">
-                        {request.receiver.name.split(" ").map((n: string) => n[0]).join("").toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h3 className="font-semibold text-gray-900">{request.receiver.name}</h3>
-                          <p className="text-gray-600 text-sm">{request.receiver.headline}</p>
-                          <div className="flex items-center space-x-4 mt-1 text-xs text-gray-500">
-                            {request.receiver.location && (
-                              <>
-                                <div className="flex items-center space-x-1">
-                                  <MapPin className="h-3 w-3" />
-                                  <span>{request.receiver.location}</span>
-                                </div>
-                                <span>•</span>
-                              </>
-                            )}
-                            <span>{new Date(request.createdAt).toLocaleDateString()}</span>
-                          </div>
-                        </div>
-                        <Badge variant="secondary" className="bg-yellow-100 text-yellow-700">
-                          <Clock className="h-3 w-3 mr-1" />
-                          Pending
-                        </Badge>
-                      </div>
-                      
-                      <div className="flex items-center space-x-3 mt-4">
-                        <Button size="sm" variant="outline">
-                          <MessageSquare className="h-4 w-4 mr-1" />
-                          Message
-                        </Button>
-                        <Button size="sm" variant="outline">
-                          <X className="h-4 w-4 mr-1" />
-                          Withdraw
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+            <PendingRequestsClient
+              lang={lang}
+              receivedRequests={receivedRequests as any}
+              sentRequests={sentRequests as any}
+            />
 
             {/* Tips */}
             <Card className="bg-white shadow-sm">

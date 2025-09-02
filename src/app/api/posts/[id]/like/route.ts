@@ -39,12 +39,25 @@ export async function POST(
       return NextResponse.json({ liked: false })
     } else {
       // Like the post
-      await prisma.like.create({
+      const like = await prisma.like.create({
         data: {
           userId: user.id,
           postId: postId
         }
       })
+      // Notify post author
+      const post = await prisma.post.findUnique({ where: { id: postId } })
+      if (post && post.authorId !== user.id) {
+        await prisma.notification.create({
+          data: {
+            userId: post.authorId,
+            type: 'LIKE',
+            title: 'New like on your post',
+            message: `${user.name} liked your post`,
+            data: { postId, likerId: user.id, likeId: like.id },
+          }
+        })
+      }
       return NextResponse.json({ liked: true })
     }
   } catch (error) {

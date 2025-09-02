@@ -5,6 +5,8 @@ import MessagingInterface from "../../components/MessagingInterface";
 import { getCurrentUser } from "@/lib/getCurrentUser";
 import { User } from "@/../types/prisma";
 import prisma from "@/lib/prisma";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getAvatarUrl } from "@/lib/image-utils";
 
 interface ChatPageProps {
   params: Promise<{ lang: string; chatid: string }>
@@ -42,6 +44,7 @@ export default async function ChatPage({ params }: ChatPageProps) {
         name: true,
         image: true,
         headline: true,
+        email: true,
       }
     });
 
@@ -53,14 +56,15 @@ export default async function ChatPage({ params }: ChatPageProps) {
             {/* Chat Interface */}
             <div className="flex-1 flex flex-col">
               {/* Chat Header */}
-              <div className="bg-white border-b px-6 py-4">
+              <div className="bg-white border-b max-h-full px-6 py-4 mt-16 fixed w-full top-0 ">
                 <div className="flex items-center space-x-3">
-                  <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold">
-                    {chatPartner.name.split(" ").map((n: string) => n[0]).join("").toUpperCase()}
-                  </div>
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src={getAvatarUrl(chatPartner.image, chatPartner.name)} />
+                    <AvatarFallback>{(chatPartner.name || 'U').slice(0,1).toUpperCase()}</AvatarFallback>
+                  </Avatar>
                   <div>
                     <h2 className="font-semibold text-gray-900">{chatPartner.name}</h2>
-                    <p className="text-sm text-gray-500">{chatPartner.headline || "Professional"}</p>
+                    <p className="text-sm text-gray-500">{chatPartner.email}</p>
                   </div>
                 </div>
               </div>

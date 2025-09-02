@@ -4,7 +4,7 @@
 
 ### Option 1: Start Everything at Once (Recommended)
 ```bash
-npm run dev-all
+npm run dev
 ```
 This will start both the WebSocket server and the Next.js development server automatically.
 
@@ -14,7 +14,7 @@ This will start both the WebSocket server and the Next.js development server aut
 npm run ws
 
 # Terminal 2: Start Next.js app
-npm run dev
+npm run dev:next
 ```
 
 ## 🎯 What's Ready
@@ -57,7 +57,12 @@ npm run seed
 ## 🛠️ Troubleshooting
 
 **WebSocket not connecting?**
-- Ensure WebSocket server is running on port 3002
+- Use `npm run dev` so the WS server starts automatically
+- Or set `NEXT_PUBLIC_SOCKET_URL` (comma-separated to provide fallbacks), e.g.
+  ```bash
+  NEXT_PUBLIC_SOCKET_URL=ws://localhost:3002
+  ```
+- Check that port 3002 is free and listening
 - Check browser console for connection errors
 
 **File uploads not working?**

@@ -65,6 +65,10 @@ class WebSocketManager {
 
   private handleMessage(senderId: string, message: any) {
     switch (message.type) {
+      case 'ping':
+        // send pong to sender only
+        this.sendToUser(senderId, { type: 'pong', payload: { ts: message.payload?.ts || Date.now() } })
+        break;
       case 'new_message':
         this.broadcastToOthers(senderId, {
           type: 'new_message',
@@ -78,7 +82,8 @@ class WebSocketManager {
           payload: {
             userId: senderId,
             chatId: message.payload.chatId,
-            isTyping: true
+            isTyping: true,
+            userName: message.payload.userName,
           }
         });
         break;
@@ -89,7 +94,8 @@ class WebSocketManager {
           payload: {
             userId: senderId,
             chatId: message.payload.chatId,
-            isTyping: false
+            isTyping: false,
+            userName: message.payload.userName,
           }
         });
         break;

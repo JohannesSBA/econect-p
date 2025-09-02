@@ -63,20 +63,52 @@ export default async function ChatPage({ params }: { params: Promise<{ lang: 'en
     }
   })
 
-  // Transform connections to conversations
-  const conversations = connections.map(connection => {
+  // Transform connections to conversations with real last message + unread count
+  const conversations = await Promise.all(connections.map(async (connection) => {
     const otherUser = connection.senderId === user.id ? connection.receiver : connection.sender
+    const [lastMsg, unreadCount] = await Promise.all([
+      prisma.message.findFirst({
+        where: {
+          OR: [
+            { senderId: user.id, recipientId: otherUser.id },
+            { senderId: otherUser.id, recipientId: user.id },
+          ]
+        },
+        orderBy: { createdAt: 'desc' },
+        select: { text: true, createdAt: true, senderId: true }
+      }),
+      prisma.message.count({
+        where: {
+          recipientId: user.id,
+          senderId: otherUser.id,
+          NOT: { readBy: { some: { id: user.id } } }
+        }
+      })
+    ])
+
+    const lastMessageText = lastMsg
+      ? `${lastMsg.senderId === user.id ? 'You: ' : ''}${lastMsg.text}`
+      : 'No messages yet'
+    const timestamp = lastMsg ? new Date(lastMsg.createdAt).toLocaleString() : ''
+
     return {
       id: otherUser.id,
       name: otherUser.name,
-      lastMessage: "Great to connect with you on Econnect!",
-      timestamp: "2 min ago",
-      unreadCount: Math.floor(Math.random() * 3),
-      isOnline: Math.random() > 0.5,
+      lastMessage: lastMessageText,
+      timestamp,
+      unreadCount,
+      isOnline: false,
       avatar: getAvatarUrl(otherUser.image, otherUser.name),
       company: otherUser.headline || "Professional",
       chatId: chatHrefConstructor(user.id, otherUser.id)
     }
+  }))
+
+  // Sort by most recent message
+  conversations.sort((a, b) => {
+    const ta = a.timestamp ? Date.parse(a.timestamp) : 0
+    const tb = b.timestamp ? Date.parse(b.timestamp) : 0
+    return tb - ta
   })
 
   return (

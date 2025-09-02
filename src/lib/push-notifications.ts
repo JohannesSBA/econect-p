@@ -3,12 +3,31 @@ import { PushNotification } from '@/types/message';
 class PushNotificationService {
   private isSupported: boolean;
   private permission: NotificationPermission = 'default';
+  private swReady: Promise<ServiceWorkerRegistration | null> | null = null;
 
   constructor() {
-    this.isSupported = 'Notification' in window;
+    const hasWindow = typeof window !== 'undefined'
+    // Avoid referencing window during SSR
+    this.isSupported = hasWindow && 'Notification' in window
     if (this.isSupported) {
-      this.permission = Notification.permission;
+      this.permission = Notification.permission
     }
+  }
+
+  private ensureServiceWorker(): Promise<ServiceWorkerRegistration | null> {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return Promise.resolve(null);
+    if (this.swReady) return this.swReady;
+    this.swReady = (async () => {
+      try {
+        const existing = await navigator.serviceWorker.getRegistration();
+        if (existing) return existing;
+        const reg = await navigator.serviceWorker.register('/sw.js');
+        return reg;
+      } catch {
+        return null;
+      }
+    })();
+    return this.swReady;
   }
 
   async requestPermission(): Promise<boolean> {
@@ -18,6 +37,8 @@ class PushNotificationService {
     }
 
     if (this.permission === 'granted') {
+      // Best-effort: ensure SW registration for actions support
+      this.ensureServiceWorker().catch(() => {});
       return true;
     }
 
@@ -29,6 +50,10 @@ class PushNotificationService {
     try {
       const result = await Notification.requestPermission();
       this.permission = result;
+      if (result === 'granted') {
+        // Register service worker for actionable notifications
+        this.ensureServiceWorker().catch(() => {});
+      }
       return result === 'granted';
     } catch (error) {
       console.error('Error requesting notification permission:', error);
@@ -42,32 +67,42 @@ class PushNotificationService {
     }
 
     try {
-      const browserNotification = new Notification(notification.title, {
+      const reg = await this.ensureServiceWorker();
+      const lang = (typeof window !== 'undefined' ? (window.location.pathname.split('/')[1] || 'en') : 'en');
+      const options: NotificationOptions & { actions?: any[] } = {
         body: notification.body,
         icon: notification.icon || '/favicon.ico',
         badge: notification.badge,
         tag: notification.tag,
         requireInteraction: notification.requireInteraction || false,
-        data: notification.data
-      });
-
-      // Handle notification click
-      browserNotification.onclick = (event) => {
-        event.preventDefault();
-        
-        if (notification.data?.chatId) {
-          // Navigate to the chat
-          window.focus();
-          window.location.href = `/chat/${notification.data.chatId}`;
-        }
-        
-        browserNotification.close();
+        data: {
+          lang,
+          ...notification.data,
+        },
+        actions: [
+          // Text reply (supported on Android Chrome)
+          { action: 'reply', title: 'Reply', icon: '/icon1.png', type: 'text', placeholder: 'Type a reply' },
+          { action: 'open_chat', title: 'Open Chat', icon: '/icon1.png' },
+        ] as any[],
       };
 
-      // Auto-close after 5 seconds
-      setTimeout(() => {
-        browserNotification.close();
-      }, 5000);
+      if (reg && 'showNotification' in reg) {
+        await reg.showNotification(notification.title, options);
+      } else {
+        // Fallback without actions
+        const browserNotification = new Notification(notification.title, options);
+        browserNotification.onclick = (event) => {
+          event.preventDefault();
+          const chatId = (options.data as any)?.chatId;
+          const lang = (options.data as any)?.lang || 'en';
+          if (chatId && typeof window !== 'undefined') {
+            window.focus();
+            window.location.href = `/${lang}/chat/${chatId}`;
+          }
+          browserNotification.close();
+        };
+        setTimeout(() => browserNotification.close(), 5000);
+      }
 
     } catch (error) {
       console.error('Error showing notification:', error);
@@ -77,15 +112,17 @@ class PushNotificationService {
   async showMessageNotification(
     senderName: string,
     messageText: string,
-    chatId: string
+    chatId: string,
+    chatPartner: string,
+    messageId?: string
   ): Promise<void> {
     const notification: PushNotification = {
       id: `msg-${Date.now()}`,
       title: `New message from ${senderName}`,
       body: messageText.length > 100 ? messageText.substring(0, 100) + '...' : messageText,
-      icon: '/message-icon.png',
+      icon: '/icon1.png',
       tag: `chat-${chatId}`,
-      data: { chatId },
+      data: { chatId, chatPartner, messageId },
       requireInteraction: false
     };
 
@@ -100,7 +137,7 @@ class PushNotificationService {
       id: `typing-${Date.now()}`,
       title: `${senderName} is typing...`,
       body: 'Someone is typing a message',
-      icon: '/typing-icon.png',
+      icon: '/icon1.png',
       tag: `typing-${chatId}`,
       data: { chatId },
       requireInteraction: false

@@ -88,6 +88,7 @@ model User {
   headline    String?           // Professional headline
   location    String?           // User location
   website     String?           // Personal website
+  notificationSettings Json?
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
 
@@ -175,6 +176,7 @@ model Post {
 
   likes       Like[]
   comments    Comment[]
+  bookmarks   PostBookmark[]
 
   @@index([authorId])
   @@index([createdAt])
@@ -206,6 +208,21 @@ model Comment {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
 
+  @@index([postId])
+}
+
+// Post bookmarks (save posts)
+model PostBookmark {
+  id        String   @id @default(cuid())
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@index([userId])
   @@index([postId])
 }
 

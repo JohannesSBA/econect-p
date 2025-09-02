@@ -15,9 +15,8 @@ import { getCurrentUser } from "@/lib/getCurrentUser"
 import { User } from "@/../types/prisma"
 import Sidebar from "../components/Sidebar"
 import prisma from "@/lib/prisma"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { getAvatarUrl } from "@/lib/image-utils"
 import { CreatePost } from "../components/CreatePost"
+import { FeedClient } from "../components/FeedClient"
 
 
 interface PostWithAuthor {
@@ -67,7 +66,14 @@ export default async function DashboardPage({ params }: { params: Promise<{ lang
           }
         },
         likes: true,
-        comments: true,
+        comments: {
+          include: {
+            user: {
+              select: { id: true, name: true, image: true }
+            }
+          },
+          orderBy: { createdAt: 'asc' }
+        },
       },
       orderBy: {
         createdAt: 'desc'
@@ -188,65 +194,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ lang
             {/* Create Post */}
             <CreatePost user={user} />
 
-            {/* Posts Feed */}
-            <div className="space-y-6">
-              {posts.map((post: PostWithAuthor) => (
-                <Card key={post.id} className="bg-white shadow-sm">
-                  <CardContent className="p-6">
-                    <div className="flex items-start space-x-3 mb-4">
-                      <Link href={`/${lang}/user/${post.author.id}`}>
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={getAvatarUrl(post.author.image, post.author.name)} />
-                          <AvatarFallback>{post.author.name.split(" ").map((n: string) => n[0]).join("").toUpperCase()}</AvatarFallback>
-                        </Avatar>
-                      </Link>
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2">
-                          <Link href={`/${lang}/user/${post.author.id}`}>
-                            <h3 className="font-semibold text-gray-900">{post.author.name}</h3>
-                          </Link>
-                          {post.author.headline && (
-                            <Badge variant="secondary" className="text-xs">
-                              {post.author.headline}
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-gray-500">
-                          {new Date(post.createdAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mb-4">
-                      {post.title && (
-                        <h4 className="text-gray-900 font-semibold mb-1">{post.title}</h4>
-                      )}
-                      <p className="text-gray-800 mb-2">{post.content}</p>
-                      {post.images && post.images.length > 0 && (
-                        <div className="grid grid-cols-3 gap-2 mt-2">
-                          {post.images.map((url) => (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img key={url} src={url} alt="post" className="w-full h-32 object-cover rounded" />
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex items-center space-x-6 mb-4">
-                      <button className="flex items-center space-x-2 text-gray-500 hover:text-red-500 transition-colors">
-                        <span className="text-sm">👍 {post.likes.length}</span>
-                      </button>
-                      <button className="flex items-center space-x-2 text-gray-500 hover:text-blue-500 transition-colors">
-                        <span className="text-sm">💬 {post.comments.length}</span>
-                      </button>
-                      <button className="flex items-center space-x-2 text-gray-500 hover:text-green-500 transition-colors">
-                        <span className="text-sm">Share</span>
-                      </button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            <FeedClient initialPosts={posts as any} user={user as any} />
           </div>
 
           {/* Right Sidebar */}

@@ -49,7 +49,7 @@ export default async function RootLayout({
         <ErrorBoundary fallback={<NotFound />}>
           {/* 2️⃣ Wrap everything in the client-side SessionProvider */}
           <NextAuthSessionProvider session={session}>
-            <Toaster position="top-center" richColors />
+            <Toaster position="top-right" richColors />
             {children}
           </NextAuthSessionProvider>
         </ErrorBoundary>

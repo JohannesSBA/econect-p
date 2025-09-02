@@ -9,7 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Link from 'next/link';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import {
   Mail,
   Lock,
@@ -77,12 +77,26 @@ export default function RegisterForm({ dict, lang }: RegisterFormProps) {
       const response = await axios.post('/api/auth/register', formData);
       console.log('Success:', response.data);
       // Optionally redirect or show success message
+      if( response.status === 409) {
+        toast.error('Email or phone already in use');
+        setTimeout(() => {
+          router.push(`/${lang}/auth/login`);
+        }, 3000);
+      }
+      if(response.status !== 409) {
+        setStep('verify');
+      }
     } catch (error) {
-      toast.error(`${error}`);
+      if(error instanceof AxiosError && error.status === 409) {
+        toast.error('Email or phone already in use');
+        setTimeout(() => {
+          router.push(`/${lang}/auth/login`);
+        }, 3000);
+      }
       console.error('Registration error:', error);
     } finally {
       setLoading(false);
-      setStep('verify');
+      
     }
   };
 

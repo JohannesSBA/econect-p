@@ -42,18 +42,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "chatId and chatPartner are required" }, { status: 400 });
   }
 
-  // Verify that the users are connected
-  const connection = await prisma.connection.findFirst({
-    where: {
-      OR: [
-        { senderId: user.id, receiverId: chatPartner, status: 'ACCEPTED' },
-        { senderId: chatPartner, receiverId: user.id, status: 'ACCEPTED' }
-      ]
+  // Verify that the users are connected, unless sender has employer privileges
+  const isEmployerRole = user.role === 'EMPLOYER' || user.role === 'RECRUITER' || user.role === 'ADMIN'
+  if (!isEmployerRole) {
+    const connection = await prisma.connection.findFirst({
+      where: {
+        OR: [
+          { senderId: user.id, receiverId: chatPartner, status: 'ACCEPTED' },
+          { senderId: chatPartner, receiverId: user.id, status: 'ACCEPTED' }
+        ]
+      }
+    });
+    if (!connection) {
+      return NextResponse.json({ error: "Users must be connected to send messages" }, { status: 403 });
     }
-  });
-
-  if (!connection) {
-    return NextResponse.json({ error: "Users must be connected to send messages" }, { status: 403 });
   }
 
   try {
@@ -136,6 +138,11 @@ export async function POST(req: NextRequest) {
       replyTo: completeMessage!.replyTo,
       isEdited: completeMessage!.isEdited,
       editedAt: completeMessage!.editedAt,
+      sender: {
+        id: completeMessage!.sender.id,
+        name: completeMessage!.sender.name,
+        image: completeMessage!.sender.image,
+      },
     });
   } catch (error) {
     console.error("Error creating message:", error);

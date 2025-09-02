@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useSession } from "next-auth/react";
 import { socketManager } from "@/lib/socket";
+import { pushNotificationService } from "@/lib/push-notifications";
 import { 
   Message, MessageAttachment, MessageReaction, 
   TypingIndicator, OnlineStatus, MessageSearchResult 
@@ -45,9 +46,13 @@ export default function Conversations({
   const [currentUserId, setCurrentUserId] = useState<string>("");
   
   const scrollDownRef = useRef<HTMLDivElement | null>(null);
+  const listRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isPrependingRef = useRef<boolean>(false);
+  const [hasMore, setHasMore] = useState<boolean>(true);
+  const [loadingMore, setLoadingMore] = useState<boolean>(false);
 
   // Get current user ID
   useEffect(() => {
@@ -79,24 +84,44 @@ export default function Conversations({
       socketManager.on('message_deleted', handleMessageDeleted);
 
       return () => {
-        socketManager.off('new_message');
-        socketManager.off('typing_start');
-        socketManager.off('typing_stop');
-        socketManager.off('user_online');
-        socketManager.off('message_reaction');
-        socketManager.off('message_edited');
-        socketManager.off('message_deleted');
+        socketManager.off('new_message', handleNewMessage);
+        socketManager.off('typing_start', handleTypingStart);
+        socketManager.off('typing_stop', handleTypingStop);
+        socketManager.off('user_online', handleUserOnline);
+        socketManager.off('message_reaction', handleMessageReaction);
+        socketManager.off('message_edited', handleMessageEdited);
+        socketManager.off('message_deleted', handleMessageDeleted);
       };
     }
   }, [session?.user?.email]);
 
+  // Request notification permission once
+  useEffect(() => {
+    // Only in browser
+    if (typeof window !== 'undefined') {
+      pushNotificationService.requestPermission().catch(() => {});
+    }
+  }, []);
+
   // Load messages
   useEffect(() => {
     loadMessages();
+    // Mark all messages from this chat partner as read for current user
+    const markRead = async () => {
+      try {
+        await axios.post('/api/message/mark-read', { chatPartner });
+        // Notify others to update unread counters
+        socketManager.emit('messages_read', { chatPartner, chatId });
+      } catch (err) {
+        // ignore
+      }
+    }
+    markRead();
   }, [chatId, chatPartner]);
 
-  // Auto-scroll to bottom
+  // Auto-scroll to bottom (skip when prepending older messages)
   useEffect(() => {
+    if (isPrependingRef.current) return;
     if (scrollDownRef.current) {
       scrollDownRef.current.scrollIntoView({ behavior: "smooth" });
     }
@@ -107,13 +132,16 @@ export default function Conversations({
       const res = await axios.post("/api/message/get", {
         chatPartner,
         chatId,
+        limit: 15,
       });
-      const sortedMessages = res.data.sort(
+      const payload = res.data?.messages ? res.data : { messages: res.data, hasMore: false } as any;
+      const sortedMessages = (payload.messages as Message[]).sort(
         (a: Message, b: Message) =>
           new Date(a.createdAt).getTime() -
           new Date(b.createdAt).getTime()
       );
       setMessages(sortedMessages);
+      setHasMore(Boolean(payload.hasMore));
 
       const initialReadStatus: Record<string, boolean> = {};
       sortedMessages.forEach((message: Message) => {
@@ -128,10 +156,74 @@ export default function Conversations({
     }
   };
 
+  // Load older messages when user scrolls to top
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore || messages.length === 0) return;
+    setLoadingMore(true);
+    isPrependingRef.current = true;
+    const topBefore = messages[0];
+    const topId = topBefore?.id;
+    const container = listRef.current;
+    const prevScrollHeight = container?.scrollHeight || 0;
+    const prevScrollTop = container?.scrollTop || 0;
+    try {
+      const res = await axios.post('/api/message/get', {
+        chatPartner,
+        chatId,
+        limit: 15,
+        before: topBefore?.createdAt
+      });
+      const payload = res.data?.messages ? res.data : { messages: res.data, hasMore: false } as any;
+      const older = (payload.messages || []) as Message[];
+      if (older.length > 0) {
+        setMessages(prev => [...older, ...prev]);
+        setHasMore(Boolean(payload.hasMore));
+        // restore scroll position by maintaining top anchor
+        requestAnimationFrame(() => {
+          if (container && topId) {
+            const newScrollHeight = container.scrollHeight;
+            const delta = newScrollHeight - prevScrollHeight;
+            container.scrollTop = prevScrollTop + delta;
+          }
+        });
+      } else {
+        setHasMore(false);
+      }
+    } catch {}
+    finally {
+      setLoadingMore(false);
+      // Re-enable auto scroll for new messages
+      setTimeout(() => { isPrependingRef.current = false }, 0);
+    }
+  }, [loadingMore, hasMore, messages, chatPartner, chatId]);
+
+  // Attach scroll handler to detect top and load more
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      if (el.scrollTop < 60) loadMore();
+    };
+    el.addEventListener('scroll', onScroll);
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [loadMore]);
+
   // Real-time event handlers
   const handleNewMessage = useCallback((data: { message: Message }) => {
     setMessages(prev => [...prev, data.message]);
-  }, []);
+    // Show push notification if message is from partner and window not focused
+    try {
+      if (data.message && data.message.senderId && data.message.senderId !== currentUserId) {
+        if (typeof document !== 'undefined' && !document.hasFocus()) {
+          const senderName = (data as any).message.sender?.name || chatPartner;
+          const text = (data as any).message.text || '';
+          pushNotificationService.showMessageNotification(senderName, text, chatId, chatPartner, (data as any).message.id);
+        }
+      }
+    } catch {
+      // best-effort
+    }
+  }, [chatId, chatPartner, currentUserId]);
 
   const handleTypingStart = useCallback((data: TypingIndicator) => {
     if (data.chatId === chatId) {
@@ -142,8 +234,14 @@ export default function Conversations({
         }
         return [...prev, { ...data, userName: data.userName }];
       });
+      // Optional: show typing notification if unfocused
+      try {
+        if (typeof document !== 'undefined' && !document.hasFocus() && data.userId !== currentUserId) {
+          pushNotificationService.showTypingNotification(data.userName || 'Someone', chatId);
+        }
+      } catch {}
     }
-  }, [chatId]);
+  }, [chatId, currentUserId]);
 
   const handleTypingStop = useCallback((data: TypingIndicator) => {
     if (data.chatId === chatId) {
@@ -405,54 +503,12 @@ export default function Conversations({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Search Bar */}
-      <div className="p-4 border-b bg-white">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <Input
-            placeholder="Search messages..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && searchMessages()}
-            className="pl-10"
-          />
-          {searchQuery && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSearchQuery("")}
-              className="absolute right-2 top-1/2 transform -translate-y-1/2"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
-        
-        {/* Search Results */}
-        {searchResults.length > 0 && (
-          <div className="mt-2 max-h-40 overflow-y-auto">
-            {searchResults.map((result) => (
-              <div
-                key={result.message.id}
-                className="p-2 hover:bg-gray-50 cursor-pointer text-sm"
-                onClick={() => {
-                  // Scroll to message
-                  const element = document.getElementById(`message-${result.message.id}`);
-                  element?.scrollIntoView({ behavior: 'smooth' });
-                  setSearchResults([]);
-                  setSearchQuery("");
-                }}
-              >
-                <div className="font-medium">{result.chatPartnerName}</div>
-                <div className="text-gray-600">{result.highlightedText}</div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div ref={listRef} className=" overflow-y-scroll p-4 pb-20 space-y-4">
+        {loadingMore && (
+          <div className="text-center text-xs text-gray-400">Loading more…</div>
+        )}
         {messages.length === 0 ? (
           <div className="flex justify-center items-center h-full text-gray-500">
             <div className="text-center">
@@ -587,7 +643,7 @@ export default function Conversations({
                               <MoreHorizontal className="h-3 w-3" />
                             </Button>
                             {showReactions === message.id && (
-                              <div className="absolute bottom-full right-0 mb-1 bg-white border rounded-lg shadow-lg p-1 z-10">
+                              <div className="absolute bottom-full right-0 mb-1 bg-white border rounded-lg shadow-lg p-1">
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -685,7 +741,7 @@ export default function Conversations({
       )}
 
       {/* Message Input */}
-      <div className="border-t bg-white p-4">
+      <div className="border-t bg-white h-fit p-4 fixed w-full bottom-0 z-10">
         <div className="flex items-center space-x-2">
           <Button
             variant="ghost"

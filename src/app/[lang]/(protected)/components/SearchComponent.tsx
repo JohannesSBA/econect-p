@@ -164,7 +164,7 @@ export default function SearchComponent() {
   };
 
   return (
-    <div ref={searchRef} className="relative">
+    <div ref={searchRef} className="relative z-100">
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
         <Input
@@ -193,7 +193,7 @@ export default function SearchComponent() {
 
       {/* Search Type Filter */}
       {showResults && (
-        <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-50 mt-1">
+        <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-150 mt-1">
           <div className="flex border-b border-gray-100">
             {[
               { key: 'all', label: 'All', icon: Search },

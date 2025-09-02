@@ -26,15 +26,28 @@ interface PostAuthor {
   headline?: string
 }
 
+interface PostCommentUser {
+  id: string
+  name: string
+  image?: string
+}
+
+interface PostComment {
+  id: string
+  content: string
+  createdAt: Date | string
+  user: PostCommentUser
+}
+
 interface Post {
   id: string
   content: string
   type: "TEXT" | "IMAGE" | "LINK" | "ARTICLE"
   linkUrl?: string
   author: PostAuthor
-  createdAt: Date
+  createdAt: Date | string
   likes: number
-  comments: number
+  comments: PostComment[]
   shares: number
   isLiked: boolean
   isBookmarked: boolean
@@ -49,18 +62,27 @@ export function PostCard({ post, user }: PostCardProps) {
   const [isLiked, setIsLiked] = useState(post.isLiked)
   const [isBookmarked, setIsBookmarked] = useState(post.isBookmarked)
   const [likeCount, setLikeCount] = useState(post.likes)
+  const [comments, setComments] = useState<PostComment[]>(post.comments || [])
+  const [commentCount, setCommentCount] = useState((post.comments || []).length)
   const [showComments, setShowComments] = useState(false)
   const [comment, setComment] = useState("")
 
   const handleLike = async () => {
     try {
       const response = await fetch(`/api/posts/${post.id}/like`, {
-        method: isLiked ? "DELETE" : "POST",
+        method: "POST",
       })
 
       if (response.ok) {
-        setIsLiked(!isLiked)
-        setLikeCount(isLiked ? likeCount - 1 : likeCount + 1)
+        const data = await response.json().catch(() => ({} as any))
+        const nextLiked = typeof data?.liked === "boolean" ? data.liked : !isLiked
+        setIsLiked(nextLiked)
+        setLikeCount(nextLiked ? likeCount + 1 : likeCount - 1)
+        try {
+          // Broadcast like event
+          const payload = { postId: post.id, liked: nextLiked }
+          ;(await import('@/lib/socket')).socketManager.emit('post_liked', payload)
+        } catch {}
       }
     } catch (error) {
       console.error("Error toggling like:", error)
@@ -86,7 +108,7 @@ export function PostCard({ post, user }: PostCardProps) {
     if (!comment.trim()) return
 
     try {
-      const response = await fetch(`/api/posts/${post.id}/comments`, {
+      const response = await fetch(`/api/posts/${post.id}/comment`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -95,15 +117,29 @@ export function PostCard({ post, user }: PostCardProps) {
       })
 
       if (response.ok) {
+        const data = await response.json().catch(() => null as any)
+        const created = (data?.comment ?? null) as PostComment | null
+        if (created) {
+          setComments(prev => [...prev, created])
+          setCommentCount(prev => prev + 1)
+          try {
+            // Broadcast comment event
+            const payload = { postId: post.id, comment: created }
+            ;(await import('@/lib/socket')).socketManager.emit('post_commented', payload)
+          } catch {}
+        } else {
+          setCommentCount(prev => prev + 1)
+        }
         setComment("")
-        // Optionally refresh comments
+        if (!showComments) setShowComments(true)
       }
     } catch (error) {
       console.error("Error adding comment:", error)
     }
   }
 
-  const formatDate = (date: Date) => {
+  const formatDate = (dateInput: Date | string) => {
+    const date = new Date(dateInput)
     const now = new Date()
     const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60))
     
@@ -160,7 +196,7 @@ export function PostCard({ post, user }: PostCardProps) {
         <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
           <div className="flex items-center space-x-4">
             <span>{likeCount} likes</span>
-            <span>{post.comments} comments</span>
+            <span>{commentCount} comments</span>
             <span>{post.shares} shares</span>
           </div>
         </div>
@@ -231,37 +267,25 @@ export function PostCard({ post, user }: PostCardProps) {
               </form>
             </div>
 
-            {/* Sample Comments */}
+            {/* Real Comments */}
             <div className="space-y-3">
-              <div className="flex items-start space-x-3">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs">
-                    E
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <div className="flex items-center space-x-2">
-                    <span className="font-medium text-sm">Econnect</span>
-                    <span className="text-xs text-gray-500">2h ago</span>
+              {comments.map((c) => (
+                <div key={c.id} className="flex items-start space-x-3">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={getAvatarUrl(c.user?.image, c.user?.name)} />
+                    <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs">
+                      {c.user?.name?.charAt(0)?.toUpperCase() || "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2">
+                      <span className="font-medium text-sm">{c.user?.name || "User"}</span>
+                      <span className="text-xs text-gray-500">{formatDate(c.createdAt)}</span>
+                    </div>
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{c.content}</p>
                   </div>
-                  <p className="text-sm text-gray-700">Congratulations! Welcome to the team! 🎉</p>
                 </div>
-              </div>
-
-              <div className="flex items-start space-x-3">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs">
-                    FU
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <div className="flex items-center space-x-2">
-                    <span className="font-medium text-sm">Fordham University</span>
-                    <span className="text-xs text-gray-500">1h ago</span>
-                  </div>
-                  <p className="text-sm text-gray-700">Great to see our alumni succeeding! #FordhamPride</p>
-                </div>
-              </div>
+              ))}
             </div>
           </>
         )}

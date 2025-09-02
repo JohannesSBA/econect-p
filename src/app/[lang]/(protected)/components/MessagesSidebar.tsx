@@ -5,8 +5,9 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarImage, AvatarFallback } from '@radix-ui/react-avatar'
-import { Search, Users, Badge } from 'lucide-react'
-import { useState } from 'react'
+import { Search, Users } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { useEffect, useState } from 'react'
 import { chatHrefConstructor } from '@/lib/utils'
 import { getAvatarUrl } from '@/lib/image-utils'
 
@@ -26,7 +27,9 @@ interface Props {
 
 export default function MessagesSidebar({ contacts, lang, userId }: Props) {
   const [searchQuery, setSearchQuery] = useState('')
+  const [pendingCount, setPendingCount] = useState<number>(0)
   const pathname = usePathname()
+  usePendingRequests(setPendingCount)
 
   const filtered = contacts.filter(contact =>
     contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -83,12 +86,30 @@ export default function MessagesSidebar({ contacts, lang, userId }: Props) {
 
       {/* requests footer */}
       <div className="p-4 border-t">
-        <button className="flex items-center space-x-2 w-full hover:bg-gray-50 p-3 rounded">
+        <Link href={`/${lang}/pending-requests`} className="flex items-center space-x-2 w-full hover:bg-gray-50 p-3 rounded">
           <Users className="h-5 w-5 text-gray-600" />
           <span className="font-medium">Requests</span>
-          <Badge className="ml-auto">1</Badge>
-        </button>
+          {pendingCount > 0 && <Badge className="ml-auto">{pendingCount}</Badge>}
+        </Link>
       </div>
     </div>
   )
+}
+
+// Fetch pending count on mount
+function usePendingRequests(setCount: (n: number) => void) {
+  useEffect(() => {
+    let mounted = true
+    const fetchCount = async () => {
+      try {
+        const res = await fetch('/api/connection/pending-count', { cache: 'no-store' })
+        if (!res.ok) return
+        const data = await res.json()
+        if (mounted) setCount(data.count || 0)
+      } catch {}
+    }
+    fetchCount()
+    const id = setInterval(fetchCount, 30000) // refresh every 30s
+    return () => { mounted = false; clearInterval(id) }
+  }, [setCount])
 }

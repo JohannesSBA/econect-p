@@ -1,16 +1,24 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-# Start WebSocket server in background
-echo "🚀 Starting WebSocket server..."
-npm run ws &
+PORT="${WS_PORT:-3002}"
+
+cleanup() {
+  echo '🛑 Stopping WebSocket server...'
+  if [[ -n "${WS_PID-}" ]]; then
+    kill "${WS_PID}" >/dev/null 2>&1 || true
+  fi
+}
+trap cleanup EXIT INT TERM
+
+echo "🚀 Starting WebSocket server on :$PORT..."
+WS_PORT="$PORT" npm run ws &
 WS_PID=$!
 
-# Wait a moment for WebSocket server to start
-sleep 2
+# Wait briefly for the WebSocket server to accept connections (max ~10s)
+for i in {1..20}; do
+  node -e "const net=require('net'); const s=net.createConnection({host:'127.0.0.1', port:${PORT}},()=>{process.exit(0)}); s.on('error',()=>process.exit(1));" && break || sleep 0.5
+done
 
-# Start Next.js development server
 echo "🚀 Starting Next.js development server..."
-npm run dev
-
-# Cleanup: kill WebSocket server when Next.js exits
-trap "echo '🛑 Stopping WebSocket server...'; kill $WS_PID" EXIT 
+exec npm run dev:next 

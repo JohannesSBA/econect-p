@@ -29,7 +29,7 @@ export default async function ChatLayout({ params, children }: { params: Promise
         <div className="flex-1 flex flex-col">
             {children}
         </div>
-        <div className="md:flex hidden">
+        <div className="md:flex hidden z-100">
           <Sidebar user={user} lang={lang} />
         </div>
       </div>

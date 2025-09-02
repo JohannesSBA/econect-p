@@ -56,9 +56,19 @@ wss.on('connection', (ws, request) => {
 
 function handleMessage(senderId, message) {
   switch (message.type) {
+    case 'ping':
+      // respond only to sender with pong + ts
+      sendToUser(senderId, { type: 'pong', payload: { ts: message.payload?.ts || Date.now() } })
+      break;
     case 'new_message':
       broadcastToOthers(senderId, {
         type: 'new_message',
+        payload: message.payload
+      });
+      break;
+    case 'messages_read':
+      broadcastToOthers(senderId, {
+        type: 'messages_read',
         payload: message.payload
       });
       break;
@@ -107,6 +117,25 @@ function handleMessage(senderId, message) {
         payload: message.payload
       });
       break;
+    case 'new_post':
+      // New post created by sender → broadcast to others
+      broadcastToOthers(senderId, {
+        type: 'new_post',
+        payload: message.payload
+      });
+      break;
+    case 'post_liked':
+      broadcastToOthers(senderId, {
+        type: 'post_liked',
+        payload: message.payload
+      });
+      break;
+    case 'post_commented':
+      broadcastToOthers(senderId, {
+        type: 'post_commented',
+        payload: message.payload
+      });
+      break;
 
     default:
       console.log('Unknown message type:', message.type);
@@ -147,6 +176,13 @@ function broadcastToAll(message) {
       user.ws.send(JSON.stringify(message));
     }
   });
+}
+
+function sendToUser(userId, message) {
+  const u = connectedUsers.get(userId)
+  if (u && u.ws.readyState === 1) {
+    try { u.ws.send(JSON.stringify(message)) } catch {}
+  }
 }
 
 const PORT = process.env.WS_PORT || 3002;

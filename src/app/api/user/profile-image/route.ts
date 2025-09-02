@@ -10,15 +10,15 @@ export async function PUT(req: NextRequest) {
     }
 
     const { imageUrl } = await req.json();
-
-    if (!imageUrl) {
-      return NextResponse.json({ message: "Image URL is required" }, { status: 400 });
+    // Allow empty string to clear the profile image
+    if (typeof imageUrl !== 'string') {
+      return NextResponse.json({ message: "Invalid imageUrl" }, { status: 400 });
     }
 
     // Update the user's profile image in the database
     const updatedUser = await prisma.user.update({
       where: { id: user.id },
-      data: { image: imageUrl },
+      data: { image: imageUrl || null },
     });
 
     return NextResponse.json({ 

@@ -54,6 +54,17 @@ export async function POST(request: NextRequest) {
       }
     })
 
+    // Notify employer of new application
+    await prisma.notification.create({
+      data: {
+        userId: job.employerId,
+        type: 'APPLICATION_UPDATE',
+        title: 'New job application',
+        message: `${user.name} applied to ${job.title}`,
+        data: { jobId, applicantId: user.id, applicationId: application.id },
+      }
+    })
+
     return NextResponse.json({ 
       message: "Application submitted successfully",
       applicationId: application.id

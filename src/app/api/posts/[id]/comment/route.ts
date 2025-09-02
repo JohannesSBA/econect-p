@@ -56,6 +56,19 @@ export async function POST(
       }
     })
 
+    // Notify post author
+    if (post.authorId !== user.id) {
+      await prisma.notification.create({
+        data: {
+          userId: post.authorId,
+          type: 'COMMENT',
+          title: 'New comment on your post',
+          message: `${user.name} commented on your post`,
+          data: { postId, commenterId: user.id, commentId: comment.id },
+        }
+      })
+    }
+
     return NextResponse.json({ comment })
   } catch (error) {
     console.error("Error creating comment:", error)

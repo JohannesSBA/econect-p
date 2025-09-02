@@ -11,10 +11,13 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import Signout from "./Signout"
 import SearchComponent from "./SearchComponent"
 import { getAvatarUrl } from "@/lib/image-utils"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { socketManager } from "@/lib/socket"
+import { toast } from "sonner"
 
 interface HeaderProps {
   lang: string;
@@ -30,6 +33,139 @@ interface HeaderProps {
 
 export default function Header({ lang, user }: HeaderProps) {
     const pathname = usePathname()
+    const router = useRouter()
+
+    const [unreadMessages, setUnreadMessages] = useState<number>(0)
+    const [unreadNotifications, setUnreadNotifications] = useState<number>(0)
+    const lastNotifCountRef = useRef<number>(0)
+
+    // Fetch initial counts
+    useEffect(() => {
+      let isMounted = true
+      const loadCounts = async () => {
+        try {
+          const [msgRes, notifRes] = await Promise.all([
+            fetch(`/api/message/unread-count`, { cache: "no-store" }),
+            fetch(`/api/notifications/unread-count`, { cache: "no-store" })
+          ])
+          if (!msgRes.ok || !notifRes.ok) return
+          const msgJson = await msgRes.json()
+          const notifJson = await notifRes.json()
+          if (!isMounted) return
+          setUnreadMessages(msgJson.count ?? 0)
+          setUnreadNotifications(notifJson.count ?? 0)
+          lastNotifCountRef.current = notifJson.count ?? 0
+        } catch (_) {
+          // ignore
+        }
+      }
+      loadCounts()
+      return () => { isMounted = false }
+    }, [])
+
+    // Connect socket and listen to new messages for toasts + live counter
+    useEffect(() => {
+      const userKey = user?.email || user?.id
+      if (!userKey) return
+      socketManager.connect(String(userKey))
+      // Mark online
+      const markOnline = async (isOnline: boolean) => {
+        try {
+          await fetch('/api/user/online', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isOnline }) })
+        } catch {}
+      }
+      markOnline(true)
+      const onBeforeUnload = () => {
+        try {
+          const data = new Blob([JSON.stringify({ isOnline: false })], { type: 'application/json' })
+          navigator.sendBeacon('/api/user/online', data)
+        } catch {}
+      }
+      window.addEventListener('beforeunload', onBeforeUnload)
+
+      const onNewMessage = (data: any) => {
+        try {
+          const message = data?.message
+          if (!message) return
+          // Only increment if this user is the recipient
+          if (message.recipientId && user?.id && message.recipientId === user.id) {
+            setUnreadMessages((c) => c + 1)
+            const preview = (message.text || "New message").slice(0, 80)
+            const senderName = message?.sender?.name || message?.senderName || "Someone"
+            const senderImage = message?.sender?.image || undefined
+            // Avoid noisy toasts when already in chat
+            if (!pathname.includes('/chat')) {
+              toast.custom(() => (
+                <div className="flex items-center gap-3 bg-white p-2 rounded-lg shadow-md">
+                  <div className="flex items-center gap-3 bg-gray-100 p-2 rounded-lg">
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src={getAvatarUrl(senderImage, senderName)} />
+                    <AvatarFallback>{(senderName || 'U').slice(0,1).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <div className="text-sm"><span className="font-medium">{senderName}</span>: {preview}</div>
+                  </div>
+                </div>
+              ))
+            }
+          }
+        } catch {
+          // noop
+        }
+      }
+
+      const onMessagesRead = async (_data: any) => {
+        try {
+          const res = await fetch(`/api/message/unread-count`, { cache: "no-store" })
+          if (!res.ok) return
+          const json = await res.json()
+          setUnreadMessages(json.count ?? 0)
+        } catch {}
+      }
+
+      socketManager.on('new_message', onNewMessage)
+      socketManager.on('messages_read', onMessagesRead)
+      return () => {
+        socketManager.off('new_message', onNewMessage)
+        socketManager.off('messages_read', onMessagesRead)
+        window.removeEventListener('beforeunload', onBeforeUnload)
+        markOnline(false)
+      }
+    }, [user?.email, user?.id, pathname])
+
+    // Poll unread message count to sync when messages are read elsewhere
+    useEffect(() => {
+      const interval = setInterval(async () => {
+        try {
+          const res = await fetch(`/api/message/unread-count`, { cache: "no-store" })
+          if (!res.ok) return
+          const json = await res.json()
+          setUnreadMessages(json.count ?? 0)
+        } catch {
+          // ignore
+        }
+      }, 10000)
+      return () => clearInterval(interval)
+    }, [])
+
+    // Poll notifications to detect newly arrived items and toast
+    useEffect(() => {
+      const interval = setInterval(async () => {
+        try {
+          const res = await fetch(`/api/notifications/unread-count`, { cache: "no-store" })
+          if (!res.ok) return
+          const json = await res.json()
+          const count = json.count ?? 0
+          setUnreadNotifications(count)
+          if (count > lastNotifCountRef.current) {
+            toast.info("You have a new notification")
+          }
+          lastNotifCountRef.current = count
+        } catch {
+          // ignore
+        }
+      }, 15000)
+      return () => clearInterval(interval)
+    }, [])
 
      return(
         <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
@@ -60,9 +196,11 @@ export default function Header({ lang, user }: HeaderProps) {
               >
                 <div className="relative">
                   <MessageCircle className="h-3 w-3" />
-                  <Badge className="absolute -top-2 -right-2 h-4 w-4 p-0 bg-blue-600 text-white text-xs flex items-center justify-center">
-                    1
-                  </Badge>
+                  {unreadMessages > 0 && (
+                    <Badge className="absolute -top-2 -right-2 h-4 w-4 p-0 bg-blue-600 text-white text-[10px] leading-none flex items-center justify-center">
+                      {unreadMessages > 9 ? '9+' : unreadMessages}
+                    </Badge>
+                  )}
                 </div>
                 <span className="text-xs">Messaging</span>
               </Link>
@@ -73,6 +211,15 @@ export default function Header({ lang, user }: HeaderProps) {
                 <Briefcase className="h-3 w-3" />
                 <span className="text-xs">Listings</span>
               </Link>
+              {(user?.role === 'EMPLOYER' || user?.role === 'ADMIN' || user?.role === 'RECRUITER') && (
+                <Link
+                  href={`/${lang}/employer/dashboard`}
+                  className={`flex flex-col items-center space-y-1 text-gray-600 hover:text-blue-600 ${pathname.includes('employer') ? ' pb-4 border-b-2 border-blue-600 text-blue-600' : ''}`}
+                >
+                  <Briefcase className="h-3 w-3" />
+                  <span className="text-xs">Employer</span>
+                </Link>
+              )}
               <Link
                 href={`/${lang}/connects`}
                 className={`flex flex-col items-center space-y-1 text-gray-600 hover:text-blue-600 ${pathname.includes('connects') ? ' pb-4 border-b-2 border-blue-600 text-blue-600' : ''}`}
@@ -95,9 +242,11 @@ export default function Header({ lang, user }: HeaderProps) {
                 <SearchComponent />
               </div>
               <Link href={`/${lang}/notifications`} className="relative">
-                <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 bg-blue-600 text-white text-xs flex items-center justify-center">
-                  9
-                </Badge>
+                {unreadNotifications > 0 && (
+                  <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 bg-blue-600 text-white text-[10px] leading-none flex items-center justify-center">
+                    {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                  </Badge>
+                )}
                 <Bell className="h-3 w-3 text-gray-600" />
               </Link>
               <Link href={`/${lang}/profile`} className="flex items-center space-x-3 hover:bg-gray-100/90 rounded-md p-2">

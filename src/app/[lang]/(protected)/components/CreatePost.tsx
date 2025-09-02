@@ -14,9 +14,11 @@ import {
   Globe,
   Send,
   Smile,
+  Pencil,
 } from "lucide-react"
 import { User } from "@/../types/prisma"
 import { getAvatarUrl } from "@/lib/image-utils"
+import { socketManager } from "@/lib/socket"
 
 interface CreatePostProps {
   user: User
@@ -49,11 +51,18 @@ export function CreatePost({ user }: CreatePostProps) {
       })
 
       if (response.ok) {
+        const body = await response.json().catch(() => null as any)
+        const created = body?.post
         setTitle("")
         setContent("")
         setImages([])
         setIsExpanded(false)
-        // Optionally refresh the feed or add the post to the list
+        // Broadcast new post to other clients (real-time feed)
+        try {
+          if (created) {
+            socketManager.emit('new_post', { post: created })
+          }
+        } catch {}
       }
     } catch (error) {
       console.error("Error creating post:", error)
@@ -98,6 +107,9 @@ export function CreatePost({ user }: CreatePostProps) {
   return (
     <Card className="bg-white shadow-sm">
       <CardContent className="p-4">
+        <div className="flex items-end justify-end">
+          <Pencil className="h-4 w-4" />
+        </div>
         <form onSubmit={handleSubmit}>
           <div className="flex items-start space-x-3">
             <Avatar className="h-10 w-10">
@@ -118,7 +130,7 @@ export function CreatePost({ user }: CreatePostProps) {
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 onFocus={() => setIsExpanded(true)}
-                className="min-h-[60px] border-0 bg-gray-50 hover:bg-gray-100 focus:bg-white focus:ring-2 focus:ring-blue-500 resize-none"
+                className="min-h-[60px] border-1 bg-gray-50 hover:bg-gray-100 focus:bg-white focus:ring-2 focus:ring-blue-500 resize-none"
                 rows={isExpanded ? 3 : 2}
               />
               
