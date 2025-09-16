@@ -16,18 +16,16 @@ export default async function Header({ lang }: HeaderProps) {
 
     
      return(
-        <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-              <Image src="/icon1.png" alt="Econnect" width={32} height={32} />
-            </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Econnect
-            </span>
-          </div>
+        <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50 h-20">
+        <div className="container mx-auto px-4  flex items-start justify-between">
+
+            <Link href="/" className="h-full w-fit p-0  ">
+              <Image src="/logoWName.png" alt="Econnect" width={120} height={120} />
+            </Link>
+            
+
           
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-4 py-4">
             <DropdownMenu>
               <DropdownMenuTrigger className="p-3 text-black text-xs font-bold hover:bg-gray-100 bg-white border border-gray-200 rounded-md">
                 {`${dict?.language || ''}: ${lang?.toUpperCase() || ''}`}

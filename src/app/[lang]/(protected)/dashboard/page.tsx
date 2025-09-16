@@ -15,6 +15,7 @@ import { getCurrentUser } from "@/lib/getCurrentUser"
 import { User } from "@/../types/prisma"
 import Sidebar from "../components/Sidebar"
 import prisma from "@/lib/prisma"
+import { headers } from "next/headers"
 import { CreatePost } from "../components/CreatePost"
 import { FeedClient } from "../components/FeedClient"
 
@@ -55,57 +56,24 @@ export default async function DashboardPage({ params }: { params: Promise<{ lang
       )
     }
 
-    // Fetch posts with author information and engagement data
-    let posts: PostWithAuthor[]
+    // Fetch feed using API to ensure consistent filters (blocked, followed, etc.)
+    let posts: PostWithAuthor[] = []
+    let initialCursor: string | null = null
+    let trending: PostWithAuthor[] = []
     try {
-      posts = await prisma.post.findMany({
-        include: {
-          author: {
-            select: {
-              id: true,
-              name: true,
-              image: true,
-              headline: true,
-            }
-          },
-          likes: true,
-          comments: {
-            include: {
-              user: {
-                select: { id: true, name: true, image: true }
-              }
-            },
-            orderBy: { createdAt: 'asc' }
-          },
-          bookmarks: {
-            where: { userId: user.id },
-            select: { id: true }
-          },
-        },
-        orderBy: {
-          createdAt: 'desc'
-        },
-        take: 10
-      }) as PostWithAuthor[]
-    } catch {
-      // Fallback for environments where PostBookmark table is not yet present
-      posts = await prisma.post.findMany({
-        include: {
-          author: {
-            select: { id: true, name: true, image: true, headline: true }
-          },
-          likes: true,
-          comments: {
-            include: { user: { select: { id: true, name: true, image: true } } },
-            orderBy: { createdAt: 'asc' }
-          },
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 10
-      }) as PostWithAuthor[]
-      // ensure bookmarks field exists for type safety
-      posts = posts.map(p => ({ ...p, bookmarks: [] }))
-    }
+      const hdrs = await headers()
+      const cookie = hdrs.get('cookie') || ''
+      const proto = hdrs.get('x-forwarded-proto') || 'http'
+      const host = hdrs.get('host') || 'localhost:3000'
+      const base = `${proto}://${host}`
+      const res = await fetch(`${base}/api/posts?limit=8`, { cache: 'no-store', headers: { cookie } })
+      if (res.ok) {
+        const data = await res.json()
+        posts = (data.posts || []) as PostWithAuthor[]
+        initialCursor = data.nextCursor || null
+        trending = (data.trending || []) as PostWithAuthor[]
+      }
+    } catch {}
 
     // Fetch user's connections count
     const connectionsCount = await prisma.connection.count({
@@ -126,7 +94,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ lang
     })
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen p-2 mt-2 bg-pattern">
       {/* Header */}
       <Header lang={lang} user={user
       } />
@@ -141,7 +109,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ lang
               </CardHeader>
               <CardContent className="space-y-1">
                 <Link
-                  href="/en/connections"
+                  href="/en/connects"
                   className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   <div className="flex items-center space-x-3">
@@ -220,7 +188,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ lang
             {/* Create Post */}
             <CreatePost user={user} />
 
-            <FeedClient initialPosts={posts as any} user={user as any} />
+            <FeedClient initialPosts={posts as any} user={user as any} initialCursor={initialCursor} trendingPosts={trending as any} />
           </div>
 
           {/* Right Sidebar */}

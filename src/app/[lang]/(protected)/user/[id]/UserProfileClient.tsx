@@ -97,7 +97,7 @@ export default function UserProfileClient({
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
-                          {connectionStatus === 'ACCEPTED' ? (
+                          {(user.role === 'EMPLOYER' || user.role === 'RECRUITER' || user.role === 'ADMIN') ? (
                             <Link href={`/${lang}/chat/${chatHrefConstructor(currentUser.id, user.id)}`}>
                               <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
                                 <MessageSquare className="h-4 w-4 mr-1" />
@@ -105,12 +105,21 @@ export default function UserProfileClient({
                               </Button>
                             </Link>
                           ) : (
-                            <ConnectionButton 
-                              userId={user.id} 
-                              connectionStatus={connectionStatus as any}
-                              isRequestSentByMe={isRequestSentByMeState}
-                              onStatusChange={handleStatusChange}
-                            />
+                            connectionStatus === 'ACCEPTED' ? (
+                              <Link href={`/${lang}/chat/${chatHrefConstructor(currentUser.id, user.id)}`}>
+                                <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                                  <MessageSquare className="h-4 w-4 mr-1" />
+                                  Message
+                                </Button>
+                              </Link>
+                            ) : (
+                              <ConnectionButton 
+                                userId={user.id} 
+                                connectionStatus={connectionStatus as any}
+                                isRequestSentByMe={isRequestSentByMeState}
+                                onStatusChange={handleStatusChange}
+                              />
+                            )
                           )}
                           <Button size="sm" variant="outline">
                             <MoreHorizontal className="h-4 w-4" />

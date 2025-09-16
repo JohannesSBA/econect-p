@@ -82,8 +82,22 @@ export default async function ProfilePage({ params }: { params: Promise<{ lang: 
       include: {
         post: {
           include: {
-            author: { select: { id: true, name: true, image: true, headline: true } },
-          }
+      author: {
+        select: {
+          id: true,
+          name: true,
+          image: true,
+          headline: true
+        }
+      },
+      _count: {
+        select: { likes: true, comments: true }
+      },
+      likes: {
+        where: { userId: currentUser.id },
+        select: { id: true }
+      }
+    },
         }
       },
       orderBy: { createdAt: 'desc' }

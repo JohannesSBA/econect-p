@@ -38,6 +38,20 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    // Build blocked user set (both directions)
+    let blockedUserIds: string[] = []
+    try {
+      const blocks = await (prisma as any).userBlock.findMany({
+        where: {
+          OR: [
+            { blockerId: user.id },
+            { blockedId: user.id },
+          ]
+        },
+        select: { blockerId: true, blockedId: true }
+      })
+      blockedUserIds = blocks.map((b: any) => (b.blockerId === user.id ? b.blockedId : b.blockerId))
+    } catch {}
     const searchQuery = query.trim();
     const results: {
       people: any[];
@@ -76,7 +90,10 @@ export async function GET(req: NextRequest) {
               { headline: { contains: searchQuery, mode: 'insensitive' } },
               { location: { contains: searchQuery, mode: 'insensitive' } },
             ],
-            NOT: { id: user.id } // Exclude current user
+            AND: [
+              { id: { not: user.id } },
+              ...(blockedUserIds.length ? [{ id: { notIn: blockedUserIds } }] : []),
+            ]
           },
           select: {
             id: true,
@@ -100,7 +117,10 @@ export async function GET(req: NextRequest) {
               { headline: { contains: searchQuery, mode: 'insensitive' } },
               { location: { contains: searchQuery, mode: 'insensitive' } },
             ],
-            NOT: { id: user.id }
+            AND: [
+              { id: { not: user.id } },
+              ...(blockedUserIds.length ? [{ id: { notIn: blockedUserIds } }] : []),
+            ]
           }
         })
       ]);
@@ -167,7 +187,8 @@ export async function GET(req: NextRequest) {
       const [posts, totalPosts] = await Promise.all([
         prisma.post.findMany({
           where: {
-            content: { contains: searchQuery, mode: 'insensitive' }
+            content: { contains: searchQuery, mode: 'insensitive' },
+            ...(blockedUserIds.length ? { authorId: { notIn: blockedUserIds } } : {} as any)
           },
           include: {
             author: {
@@ -202,7 +223,8 @@ export async function GET(req: NextRequest) {
         }),
         prisma.post.count({
           where: {
-            content: { contains: searchQuery, mode: 'insensitive' }
+            content: { contains: searchQuery, mode: 'insensitive' },
+            ...(blockedUserIds.length ? { authorId: { notIn: blockedUserIds } } : {} as any)
           }
         })
       ]);

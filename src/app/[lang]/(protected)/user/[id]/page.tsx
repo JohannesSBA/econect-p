@@ -40,6 +40,20 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
     notFound()
   }
 
+  // Block visibility if either direction is blocked
+  const blocked = await (prisma as any).userBlock.findFirst({
+    where: {
+      OR: [
+        { blockerId: currentUser.id, blockedId: id },
+        { blockerId: id, blockedId: currentUser.id },
+      ]
+    },
+    select: { id: true }
+  })
+  if (blocked) {
+    notFound()
+  }
+
   // Don't show own profile here - redirect to own profile page
   if (currentUser.id === user.id) {
     redirect(`/${lang}/profile`)

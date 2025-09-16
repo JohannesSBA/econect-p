@@ -95,12 +95,16 @@ export default function ProfilePageClient({ lang, userWithProfile, posts = [], p
                         </div>
                         <div className="flex items-center space-x-2">
                           <ProfileEditModal user={currentUser}>
-                            <Button size="sm" variant="outline">
+                            <Button size="sm" variant="outline" className="bg-dots-link">
                               <Settings className="h-4 w-4 mr-1" />
                               Edit Profile
                             </Button>
                           </ProfileEditModal>
-                          
+                          <Link href={`/${lang}/blocked`}>
+                            <Button size="sm" variant="outline">
+                              Manage blocked users
+                            </Button>
+                          </Link>
                         </div>
                       </div>
                     </div>
@@ -118,7 +122,7 @@ export default function ProfilePageClient({ lang, userWithProfile, posts = [], p
             />
 
             {/* Posts Section */}
-            <Card className="bg-white shadow-sm">
+            {posts.length > 0 && (<Card className="bg-white shadow-sm">
               <CardHeader className="pb-4">
                 <CardTitle className="text-lg font-semibold">Posts</CardTitle>
               </CardHeader>
@@ -155,7 +159,7 @@ export default function ProfilePageClient({ lang, userWithProfile, posts = [], p
                                 <img
                                   src={imgs[0]}
                                   alt="Post image"
-                                  className="w-1/2 max-h-[480px] object-cover rounded-lg border"
+                                  className="w-1/4 max-h-1/10 object-cover rounded-lg border"
                                   loading="lazy"
                                 />
                               </div>
@@ -169,7 +173,7 @@ export default function ProfilePageClient({ lang, userWithProfile, posts = [], p
                                   key={url}
                                   src={url}
                                   alt={`Post image ${idx + 1}`}
-                                  className="w-full h-40 md:h-56 object-cover rounded-lg border"
+                                  className="w-full h-10 md:h-20 object-cover rounded-lg border"
                                   loading="lazy"
                                 />
                               ))}
@@ -183,10 +187,10 @@ export default function ProfilePageClient({ lang, userWithProfile, posts = [], p
                   <p className="text-gray-500 text-center">No posts yet.</p>
                 )}
               </CardContent>
-            </Card>
+            </Card>)}
 
             {/* Saved Posts */}
-            <Card className="bg-white shadow-sm">
+            {savedPosts.length > 0 && (<Card className="bg-white shadow-sm">
               <CardHeader className="pb-4">
                 <CardTitle className="text-lg font-semibold">Saved Posts</CardTitle>
               </CardHeader>
@@ -206,6 +210,38 @@ export default function ProfilePageClient({ lang, userWithProfile, posts = [], p
                           </div>
                         </div>
                         <div className="text-gray-800 whitespace-pre-wrap">{bp.post.content}</div>
+                        {(() => {
+                          const imgs: string[] = (Array.isArray(bp.images) && bp.images.length > 0)
+                            ? bp.images
+                            : (bp.imageUrl ? [bp.imageUrl] : [])
+                          if (!imgs || imgs.length === 0) return null
+                          if (imgs.length === 1) {
+                            return (
+                              <div className="mt-3">
+                                <img
+                                  src={imgs[0]}
+                                  alt="Saved post image"
+                                  className="w-1/4 max-h-1/10 object-cover rounded-lg border"
+                                  loading="lazy"
+                                />
+                              </div>
+                            )
+                          }
+                          const gridCols = imgs.length === 2 ? "grid-cols-2" : "grid-cols-3"
+                          return (
+                            <div className={`mt-3 grid ${gridCols} gap-2`}>
+                              {imgs.map((url, idx) => (
+                                <img
+                                  key={url}
+                                  src={url}
+                                  alt={`Saved post image ${idx + 1}`}
+                                  className="w-full h-10 md:h-20 object-cover rounded-lg border"
+                                  loading="lazy"
+                                />
+                              ))}
+                            </div>
+                          )
+                        })()}
                       </div>
                     ))}
                   </div>
@@ -213,10 +249,10 @@ export default function ProfilePageClient({ lang, userWithProfile, posts = [], p
                   <p className="text-gray-500 text-center">No saved posts.</p>
                 )}
               </CardContent>
-            </Card>
+            </Card>)}
 
             {/* Saved Jobs */}
-            <Card className="bg-white shadow-sm">
+            {savedJobs.length > 0 && (<Card className="bg-white shadow-sm">
               <CardHeader className="pb-4">
                 <CardTitle className="text-lg font-semibold">Saved Jobs</CardTitle>
               </CardHeader>
@@ -239,7 +275,7 @@ export default function ProfilePageClient({ lang, userWithProfile, posts = [], p
                   <p className="text-gray-500 text-center">No saved jobs.</p>
                 )}
               </CardContent>
-            </Card>
+            </Card>)}
 
             {/* About Section */}
             <Card className="bg-white shadow-sm">
@@ -490,6 +526,18 @@ export default function ProfilePageClient({ lang, userWithProfile, posts = [], p
               <CardContent>
                 <Link href={`/${lang}/jobs/applied`} className="text-blue-600 hover:underline text-sm">
                   View all jobs you applied to
+                </Link>
+              </CardContent>
+            </Card>
+
+            {/* Privacy & Safety */}
+            <Card className="bg-white shadow-sm">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg font-semibold">Privacy & Safety</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Link href={`/${lang}/blocked`} className="text-blue-600 hover:underline text-sm">
+                  Manage blocked users
                 </Link>
               </CardContent>
             </Card>

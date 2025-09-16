@@ -1,12 +1,36 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { Toast, useToast } from "@/components/ui/toast"
 import {
   MoreHorizontal,
   ThumbsUp,
@@ -15,6 +39,8 @@ import {
   Bookmark,
   Send,
   Link as LinkIcon,
+  ShieldAlert,
+  Ban,
 } from "lucide-react"
 import { User } from "@/../types/prisma"
 import { getAvatarUrl } from "@/lib/image-utils"
@@ -66,6 +92,23 @@ export function PostCard({ post, user }: PostCardProps) {
   const [commentCount, setCommentCount] = useState((post.comments || []).length)
   const [showComments, setShowComments] = useState(false)
   const [comment, setComment] = useState("")
+  const [hidden, setHidden] = useState(false)
+
+  // Image preview modal state
+  const images: string[] = useMemo(() => (post as any)?.images ?? [], [post])
+  const [activeImage, setActiveImage] = useState<string | null>(null)
+  const [isImageOpen, setIsImageOpen] = useState(false)
+
+  // Report dialog state
+  const [reportOpen, setReportOpen] = useState(false)
+  const [reportReason, setReportReason] = useState("")
+  const [reporting, setReporting] = useState(false)
+
+  // Block confirm state
+  const [blockOpen, setBlockOpen] = useState(false)
+  const [blocking, setBlocking] = useState(false)
+
+  const { toasts, showToast, removeToast } = useToast()
 
   const handleLike = async () => {
     try {
@@ -152,7 +195,10 @@ export function PostCard({ post, user }: PostCardProps) {
     return date.toLocaleDateString()
   }
 
+  if (hidden) return null
+
   return (
+    <>
     <Card className="bg-white shadow-sm">
       <CardContent className="p-6">
         {/* Post Header */}
@@ -174,9 +220,24 @@ export function PostCard({ post, user }: PostCardProps) {
             </div>
             <p className="text-sm text-gray-500">{formatDate(post.createdAt)}</p>
           </div>
-          <Button variant="ghost" size="sm" className="text-gray-500 hover:text-gray-700">
-            <MoreHorizontal className="h-4 w-4" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="text-gray-500 hover:text-gray-700">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setReportOpen(true)}>
+                <ShieldAlert className="h-4 w-4" />
+                Report post
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setBlockOpen(true)} variant="destructive">
+                <Ban className="h-4 w-4" />
+                Block {post.author?.name?.split(" ")[0] || "user"}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Post Content */}
@@ -186,7 +247,17 @@ export function PostCard({ post, user }: PostCardProps) {
             <div className={`grid ${((post as any).images.length === 2 ? 'grid-cols-2' : (post as any).images.length >= 3 ? 'grid-cols-3' : 'grid-cols-1')} gap-2 mt-2`}>
               {(post as any).images.slice(0,3).map((url: string, idx: number) => (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img key={idx} src={url} alt={`post-image-${idx+1}`} className="w-full h-48 object-cover rounded-lg border" loading="lazy" />
+                <img
+                  key={idx}
+                  src={url}
+                  alt={`post-image-${idx+1}`}
+                  className="w-full h-48 object-cover rounded-lg border cursor-pointer hover:opacity-95"
+                  loading="lazy"
+                  onClick={() => {
+                    setActiveImage(url)
+                    setIsImageOpen(true)
+                  }}
+                />
               ))}
             </div>
           )}
@@ -298,6 +369,129 @@ export function PostCard({ post, user }: PostCardProps) {
           </>
         )}
       </CardContent>
+      {/* Toasts */}
+      {toasts.map(t => (
+        <Toast key={t.id} message={t.message} type={t.type} onClose={() => removeToast(t.id)} />
+      ))}
     </Card>
+    {/* Image Lightbox */}
+    {isImageOpen && (
+      <Dialog open={isImageOpen} onOpenChange={setIsImageOpen}>
+        <DialogContent className="max-w-xs sm:max-w-sm p-0" showCloseButton>
+          <div className="w-full h-72 flex items-center justify-center bg-black/5 rounded">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={activeImage || ""}
+              alt="post-image-full"
+              className="max-h-64 max-w-full object-contain rounded"
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+    )}
+
+    {/* Report Post Dialog */}
+    <Dialog open={reportOpen} onOpenChange={(o) => !reporting && setReportOpen(o)}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Report this post</DialogTitle>
+          <DialogDescription>
+            Tell us briefly why you are reporting this post.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2">
+          <Input
+            placeholder="Reason (e.g., Spam, Harassment, Misinformation, Other)"
+            value={reportReason}
+            onChange={(e) => setReportReason(e.target.value)}
+          />
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setReportOpen(false)} disabled={reporting}>
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!reportReason.trim()) {
+                  showToast("Please provide a reason to report.", "info")
+                  return
+                }
+                try {
+                  setReporting(true)
+                  const res = await fetch(`/api/posts/${post.id}/report`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ reason: reportReason.trim() })
+                  })
+                  if (res.ok) {
+                    showToast("Report submitted. Thank you.", "success")
+                    setReportOpen(false)
+                    setReportReason("")
+                  } else {
+                    const data = await res.json().catch(() => ({} as any))
+                    showToast(data?.error || "Failed to submit report.", "error")
+                  }
+                } catch (e) {
+                  console.error(e)
+                  showToast("Network error while reporting.", "error")
+                } finally {
+                  setReporting(false)
+                }
+              }}
+              disabled={reporting}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {reporting ? "Submitting…" : "Submit"}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+
+    {/* Block User Confirm */}
+    <AlertDialog open={blockOpen} onOpenChange={(o) => !blocking && setBlockOpen(o)}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>
+            Block {post.author?.name || "this user"}?
+          </AlertDialogTitle>
+        </AlertDialogHeader>
+        <p className="text-sm text-gray-600">
+          You won’t see content from this user. They won’t be notified.
+        </p>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={blocking}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-red-600 hover:bg-red-700"
+            disabled={blocking}
+            onClick={async () => {
+              try {
+                setBlocking(true)
+                const res = await fetch(`/api/user/block`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ userId: post.author?.id })
+                })
+                if (res.ok) {
+                  showToast("User blocked.", "success")
+                  setHidden(true)
+                  setBlockOpen(false)
+                } else {
+                  const data = await res.json().catch(() => ({} as any))
+                  showToast(data?.error || "Failed to block user.", "error")
+                }
+              } catch (e) {
+                console.error(e)
+                showToast("Network error while blocking.", "error")
+              } finally {
+                setBlocking(false)
+              }
+            }}
+          >
+            {blocking ? "Blocking…" : "Block"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   )
-} 
+}

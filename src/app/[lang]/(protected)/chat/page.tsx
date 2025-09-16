@@ -65,12 +65,15 @@ export default async function ChatPage({ params }: { params: Promise<{ lang: 'en
 
   // Transform connections to conversations with real last message + unread count
   const conversations = await Promise.all(connections.map(async (connection) => {
+    console.log("connection", connection)
+    console.log("user.id", user.id)
     const otherUser = connection.senderId === user.id ? connection.receiver : connection.sender
+    console.log("otherUser", otherUser)
     const [lastMsg, unreadCount] = await Promise.all([
       prisma.message.findFirst({
         where: {
           OR: [
-            { senderId: user.id, recipientId: otherUser.id },
+              { senderId: user.id, recipientId: otherUser.id },
             { senderId: otherUser.id, recipientId: user.id },
           ]
         },
@@ -110,6 +113,43 @@ export default async function ChatPage({ params }: { params: Promise<{ lang: 'en
     const tb = b.timestamp ? Date.parse(b.timestamp) : 0
     return tb - ta
   })
+
+  // If employer/recruiter/admin, load message requests (pending DMs from non-connections)
+  const isEmployerUser = user.role === 'EMPLOYER' || user.role === 'RECRUITER' || user.role === 'ADMIN'
+  let requests: Array<{ id: string; name: string; avatar: string; chatId: string; timestamp: string; lastMessage: string }>= []
+  if (isEmployerUser) {
+    const pending = await (prisma as any).messageRequest.findMany({
+      where: { recipientId: user.id, status: 'PENDING' },
+      include: {
+        sender: {
+          select: { id: true, name: true, image: true, headline: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+    requests = await Promise.all(pending.map(async (req: any) => {
+      const lastMsg = await prisma.message.findFirst({
+        where: {
+          OR: [
+            { senderId: user.id, recipientId: req.sender.id },
+            { senderId: req.sender.id, recipientId: user.id },
+          ]
+        },
+        orderBy: { createdAt: 'desc' },
+        select: { text: true, createdAt: true, senderId: true }
+      })
+      const lastMessageText = lastMsg ? `${lastMsg.senderId === user.id ? 'You: ' : ''}${lastMsg.text}` : 'Request to message you'
+      const timestamp = lastMsg ? new Date(lastMsg.createdAt).toLocaleString() : new Date(req.createdAt).toLocaleString()
+      return {
+        id: req.sender.id,
+        name: req.sender.name,
+        avatar: getAvatarUrl(req.sender.image, req.sender.name),
+        chatId: chatHrefConstructor(user.id, req.sender.id),
+        lastMessage: lastMessageText,
+        timestamp
+      }
+    }))
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -199,6 +239,45 @@ export default async function ChatPage({ params }: { params: Promise<{ lang: 'en
               )}
             </CardContent>
           </Card>
+
+          {isEmployerUser && (
+            <Card className="bg-white shadow-sm mt-6">
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold">Message Requests</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {requests.length > 0 ? (
+                  <div className="space-y-1">
+                    {requests.map((r) => (
+                      <Link key={r.id} href={`/${lang}/chat/${r.chatId}`}>
+                        <div className="flex items-center space-x-3 p-4 hover:bg-gray-50 cursor-pointer border-l-4 border-yellow-400/60">
+                          <div className="relative">
+                            <Avatar className="h-12 w-12">
+                              <AvatarImage src={r.avatar} />
+                              <AvatarFallback className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
+                                {r.name.split(" ").map((n: string) => n[0]).join("").toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <h4 className="font-medium text-gray-900 truncate">{r.name} <span className="ml-2 text-xs text-yellow-700 bg-yellow-100 px-2 py-0.5 rounded">Request</span></h4>
+                              <span className="text-xs text-gray-500">{r.timestamp}</span>
+                            </div>
+                            <p className="text-sm text-gray-600 truncate">{r.lastMessage}</p>
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-gray-600">No message requests</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Quick Actions */}
           <Card className="bg-white shadow-sm mt-6">

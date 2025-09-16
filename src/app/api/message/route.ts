@@ -42,8 +42,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "chatId and chatPartner are required" }, { status: 400 });
   }
 
-  // Verify that the users are connected, unless sender has employer privileges
+  // Verify that the users are connected, unless exceptions apply
   const isEmployerRole = user.role === 'EMPLOYER' || user.role === 'RECRUITER' || user.role === 'ADMIN'
+  const recipient = await prisma.user.findUnique({ where: { id: chatPartner }, select: { id: true, role: true } })
+  const isRecipientEmployer = recipient ? (recipient.role === 'EMPLOYER' || recipient.role === 'RECRUITER' || recipient.role === 'ADMIN') : false
+
   if (!isEmployerRole) {
     const connection = await prisma.connection.findFirst({
       where: {
@@ -54,7 +57,10 @@ export async function POST(req: NextRequest) {
       }
     });
     if (!connection) {
-      return NextResponse.json({ error: "Users must be connected to send messages" }, { status: 403 });
+      // Allow sending to employer/recruiter as a message request
+      if (!isRecipientEmployer) {
+        return NextResponse.json({ error: "Users must be connected to send messages" }, { status: 403 });
+      }
     }
   }
 
@@ -90,6 +96,37 @@ export async function POST(req: NextRequest) {
         reactions: true,
       }
     });
+
+    // If sender is not employer and recipient is employer and not connected, ensure a PENDING message request exists
+    if (!isEmployerRole && isRecipientEmployer) {
+      try {
+        const repliedBefore = await prisma.message.findFirst({
+          where: { senderId: chatPartner, recipientId: user.id },
+          select: { id: true }
+        })
+        await (prisma as any).messageRequest.upsert({
+          where: { senderId_recipientId: { senderId: user.id, recipientId: chatPartner } },
+          create: {
+            senderId: user.id,
+            recipientId: chatPartner,
+            status: repliedBefore ? 'ACCEPTED' : 'PENDING'
+          },
+          update: {
+            status: repliedBefore ? 'ACCEPTED' : 'PENDING'
+          }
+        })
+      } catch {}
+    }
+
+    // If sender is employer, accept any existing pending message request from the recipient
+    if (isEmployerRole) {
+      try {
+        await (prisma as any).messageRequest.updateMany({
+          where: { senderId: chatPartner, recipientId: user.id, status: 'PENDING' },
+          data: { status: 'ACCEPTED' }
+        })
+      } catch {}
+    }
 
     // Add attachments if provided
     if (attachments && attachments.length > 0) {

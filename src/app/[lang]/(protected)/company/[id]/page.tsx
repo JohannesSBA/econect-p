@@ -18,12 +18,14 @@ import {
   Share2,
 } from "lucide-react"
 import Link from "next/link"
+import { chatHrefConstructor } from "@/lib/utils"
 import Header from "../../components/Header"
 import { getCurrentUser } from "@/lib/getCurrentUser"
 import { User } from "@/../types/prisma"
 import prisma from "@/lib/prisma"
 import { notFound } from "next/navigation"
 import { getCompanyLogoUrl } from "@/lib/image-utils"
+import FollowCompanyButton from "../../components/FollowCompanyButton"
 
 export default async function CompanyPage({ 
   params 
@@ -73,6 +75,26 @@ export default async function CompanyPage({
   if (!company || (company.role !== "EMPLOYER" && company.role !== "RECRUITER")) {
     notFound()
   }
+
+  // Block visibility if either direction is blocked
+  const blocked = await (prisma as any).userBlock.findFirst({
+    where: {
+      OR: [
+        { blockerId: user.id, blockedId: id },
+        { blockerId: id, blockedId: user.id },
+      ]
+    },
+    select: { id: true }
+  })
+  if (blocked) {
+    notFound()
+  }
+
+  // Determine if current user follows this company
+  const follow = await (prisma as any).companyFollow.findFirst({
+    where: { followerId: user.id, companyId: id },
+    select: { id: true }
+  })
 
   // Get company stats
   const companyStats = await prisma.jobListing.aggregate({
@@ -303,13 +325,13 @@ export default async function CompanyPage({
                 <CardTitle>Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button className="w-full bg-blue-600 hover:bg-blue-700">
-                  Follow Company
-                </Button>
-                <Button variant="outline" className="w-full">
-                  <Mail className="h-4 w-4 mr-2" />
-                  Contact
-                </Button>
+                <FollowCompanyButton companyId={id} initiallyFollowing={Boolean(follow)} />
+                <Link href={`/${lang}/chat/${chatHrefConstructor(user.id, id)}`}>
+                  <Button variant="outline" className="w-full">
+                    <Mail className="h-4 w-4 mr-2" />
+                    Contact
+                  </Button>
+                </Link>
                 <Button variant="outline" className="w-full">
                   <Share2 className="h-4 w-4 mr-2" />
                   Share Profile

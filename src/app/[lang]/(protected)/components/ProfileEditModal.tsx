@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -72,8 +72,44 @@ export function ProfileEditModal({ user, children }: ProfileEditModalProps) {
     }
   }
 
+  // Open the modal automatically when URL has #settings
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (window.location.hash === '#settings') {
+      setOpen(true)
+    }
+
+    const onHashChange = () => {
+      if (window.location.hash === '#settings') {
+        setOpen(true)
+      }
+    }
+    window.addEventListener('hashchange', onHashChange)
+    return () => window.removeEventListener('hashchange', onHashChange)
+  }, [])
+
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next)
+    if (typeof window === 'undefined') return
+    try {
+      if (next) {
+        if (window.location.hash !== '#settings') {
+          const url = new URL(window.location.href)
+          url.hash = '#settings'
+          window.history.replaceState(null, '', url.toString())
+        }
+      } else {
+        if (window.location.hash === '#settings') {
+          const url = new URL(window.location.href)
+          url.hash = ''
+          window.history.replaceState(null, '', url.pathname + url.search)
+        }
+      }
+    } catch {}
+  }
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>

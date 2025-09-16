@@ -1,8 +1,8 @@
 generator client {
-  provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
+  provider        = "prisma-client-js"
+  output          = "../src/generated/prisma"
   previewFeatures = ["interactiveTransactions"]
-  seed = "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
+  seed            = "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
 }
 
 datasource db {
@@ -77,61 +77,76 @@ enum PostType {
 }
 
 model User {
-  id          String            @id @default(cuid())
-  name        String
-  phone       String            @unique
-  email       String            @unique
-  language    String            @default("en")
-  password    String?
-  role        UserRole
-  image       String?           // Profile picture URL
-  headline    String?           // Professional headline
-  location    String?           // User location
-  website     String?           // Personal website
+  id                   String   @id @default(cuid())
+  name                 String
+  phone                String   @unique
+  email                String   @unique
+  language             String   @default("en")
+  password             String?
+  role                 UserRole
+  image                String? // Profile picture URL
+  headline             String? // Professional headline
+  location             String? // User location
+  website              String? // Personal website
   notificationSettings Json?
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   // Relations
-  jobListings JobListing[]      @relation("EmployerJobs")
-  profile     JobSeekerProfile?  @relation("SeekerProfile")
-  applications JobApplication[] @relation("UserApplications")
-  
+  jobListings  JobListing[]      @relation("EmployerJobs")
+  profile      JobSeekerProfile? @relation("SeekerProfile")
+  applications JobApplication[]  @relation("UserApplications")
+
   // Posts
-  posts       Post[]
-  
+  posts Post[]
+
   // Connections (enhanced)
   sentConnections     Connection[] @relation("SentConnections")
   receivedConnections Connection[] @relation("ReceivedConnections")
-  
+
   // Likes and Comments
-  likes       Like[]
-  comments    Comment[]
-  
+  likes    Like[]
+  comments Comment[]
+
   // Notifications
   notifications Notification[]
-  
+
   // Bookmarks
   bookmarkedJobs JobBookmark[]
   postBookmarks  PostBookmark[]
-  
-  //Chat
-  messagesSent         Message[]    @relation("messagesSent")
-  messagesReceived     Message[]    @relation("messagesReceived")
-  messagesRead         Message[]    @relation("messagesRead")
 
-  sessions      Session[]
-  
+  // Company follows
+  followingCompanies CompanyFollow[] @relation("UserFollowingCompanies")
+  companyFollowers   CompanyFollow[] @relation("CompanyHasFollowers")
+
+  // Blocks
+  sentBlocks     UserBlock[] @relation("UserBlocks")
+  receivedBlocks UserBlock[] @relation("UserBlockedBy")
+
+  //Chat
+  messagesSent     Message[] @relation("messagesSent")
+  messagesReceived Message[] @relation("messagesReceived")
+  messagesRead     Message[] @relation("messagesRead")
+
+  sessions Session[]
+
   // New messaging features
-  uploadedAttachments MessageAttachment[] @relation("UserUploads")
-  messageReactions    MessageReaction[]   @relation("UserReactions")
-  onlineStatus        UserOnlineStatus?   @relation("UserOnlineStatus")
-  typingIndicators    TypingIndicator[]   @relation("UserTyping")
-  companyExperiences  Experience[]        @relation("CompanyUserExperiences")
+  uploadedAttachments   MessageAttachment[]    @relation("UserUploads")
+  messageReactions      MessageReaction[]      @relation("UserReactions")
+  onlineStatus          UserOnlineStatus?      @relation("UserOnlineStatus")
+  typingIndicators      TypingIndicator[]      @relation("UserTyping")
+  companyExperiences    Experience[]           @relation("CompanyUserExperiences")
   // Employer profile
-  employerProfile     EmployerProfile?
-  payments            Payment[]
+  employerProfile       EmployerProfile?
+  payments              Payment[]
   advertisementRequests AdvertisementRequest[]
+
+  // Post reports submitted by this user
+  postReports PostReport[]
+
+  // Message requests
+  messageRequestsSent     MessageRequest[] @relation("MessageRequestsSent")
+  messageRequestsReceived MessageRequest[] @relation("MessageRequestsReceived")
 }
 
 model PendingUser {
@@ -147,15 +162,15 @@ model PendingUser {
 
 // Enhanced Connection model
 model Connection {
-  id          String           @id @default(cuid())
-  senderId    String
-  receiverId  String
-  status      ConnectionStatus @default(PENDING)
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  id         String           @id @default(cuid())
+  senderId   String
+  receiverId String
+  status     ConnectionStatus @default(PENDING)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
 
-  sender      User             @relation("SentConnections", fields: [senderId], references: [id], onDelete: Cascade)
-  receiver    User             @relation("ReceivedConnections", fields: [receiverId], references: [id], onDelete: Cascade)
+  sender   User @relation("SentConnections", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("ReceivedConnections", fields: [receiverId], references: [id], onDelete: Cascade)
 
   @@unique([senderId, receiverId])
   @@index([senderId])
@@ -164,21 +179,22 @@ model Connection {
 
 // Posts for LinkedIn-style feed
 model Post {
-  id          String    @id @default(cuid())
-  title       String?
-  content     String
-  type        PostType  @default(TEXT)
-  imageUrl    String?   // For image posts
-  linkUrl     String?   // For link posts
-  images      String[]  @default([])
-  authorId    String
-  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id        String   @id @default(cuid())
+  title     String?
+  content   String
+  type      PostType @default(TEXT)
+  imageUrl  String? // For image posts
+  linkUrl   String? // For link posts
+  images    String[] @default([])
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  likes       Like[]
-  comments    Comment[]
-  bookmarks   PostBookmark[]
+  likes     Like[]
+  comments  Comment[]
+  bookmarks PostBookmark[]
+  reports   PostReport[]
 
   @@index([authorId])
   @@index([createdAt])
@@ -191,8 +207,8 @@ model Like {
   postId    String
   createdAt DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@unique([userId, postId])
   @@index([postId])
@@ -207,8 +223,8 @@ model Comment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@index([postId])
 }
@@ -220,12 +236,78 @@ model PostBookmark {
   postId    String
   createdAt DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@unique([userId, postId])
   @@index([userId])
   @@index([postId])
+}
+
+// User blocks
+model UserBlock {
+  id        String   @id @default(cuid())
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+
+  blocker User @relation("UserBlocks", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("UserBlockedBy", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockedId])
+}
+
+// Post reports
+model PostReport {
+  id         String   @id @default(cuid())
+  postId     String
+  reporterId String
+  reason     String
+  createdAt  DateTime @default(now())
+
+  post     Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  reporter User @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, reporterId])
+  @@index([postId])
+  @@index([reporterId])
+}
+
+// Company follows (users follow employer/recruiter pages)
+model CompanyFollow {
+  id         String   @id @default(cuid())
+  followerId String
+  companyId  String
+  createdAt  DateTime @default(now())
+
+  follower User @relation("UserFollowingCompanies", fields: [followerId], references: [id], onDelete: Cascade)
+  company  User @relation("CompanyHasFollowers", fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, companyId])
+  @@index([companyId])
+}
+
+enum MessageRequestStatus {
+  PENDING
+  ACCEPTED
+  BLOCKED
+}
+
+// Message requests for unconnected conversations
+model MessageRequest {
+  id          String               @id @default(cuid())
+  senderId    String
+  recipientId String
+  status      MessageRequestStatus @default(PENDING)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  sender    User @relation("MessageRequestsSent", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient User @relation("MessageRequestsReceived", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, recipientId])
+  @@index([recipientId])
 }
 
 // Notifications
@@ -236,10 +318,10 @@ model Notification {
   message   String
   userId    String
   read      Boolean          @default(false)
-  data      Json?            // Additional data (e.g., postId, jobId, etc.)
+  data      Json? // Additional data (e.g., postId, jobId, etc.)
   createdAt DateTime         @default(now())
 
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([read])
@@ -252,118 +334,118 @@ model JobBookmark {
   jobId     String
   createdAt DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  job       JobListing @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  JobListing @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
   @@unique([userId, jobId])
   @@index([userId])
 }
 
 model JobListing {
-  id          String     @id @default(cuid())
+  id          String    @id @default(cuid())
   title       String
   description String
   company     String
   location    String
   tags        String[]
   salary      String?
-  jobType     JobType    @default(FULL_TIME)
-  status      JobStatus  @default(OPEN)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  isPublished Boolean    @default(true)
-  publishedAt DateTime?  @default(now())
+  jobType     JobType   @default(FULL_TIME)
+  status      JobStatus @default(OPEN)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  isPublished Boolean   @default(true)
+  publishedAt DateTime? @default(now())
 
   // Relations
-  employerId  String
-  employer    User       @relation("EmployerJobs", fields: [employerId], references: [id])
+  employerId   String
+  employer     User             @relation("EmployerJobs", fields: [employerId], references: [id])
   applications JobApplication[] @relation("JobApplications")
-  bookmarks   JobBookmark[]
-  payments    Payment[]
+  bookmarks    JobBookmark[]
+  payments     Payment[]
 
   @@index([location, createdAt])
 }
 
 model JobSeekerProfile {
-  id           String         @id @default(cuid())
-  bio          String?
-  education    Education[]
-  resumeUrl    String?
-  jobSeekerId  String         @unique
-  jobSeeker    User           @relation("SeekerProfile", fields: [jobSeekerId], references: [id])
+  id          String      @id @default(cuid())
+  bio         String?
+  education   Education[]
+  resumeUrl   String?
+  jobSeekerId String      @unique
+  jobSeeker   User        @relation("SeekerProfile", fields: [jobSeekerId], references: [id])
 
   // Skill relation
-  skills       SkillOnProfile[]
+  skills SkillOnProfile[]
 
   // Experiences
-  experiences  Experience[]
+  experiences Experience[]
 }
 
 model Experience {
-  id                   String               @id @default(cuid())
-  jobSeekerProfile     JobSeekerProfile     @relation(fields: [jobSeekerProfileId], references: [id])
-  jobSeekerProfileId   String
+  id                 String           @id @default(cuid())
+  jobSeekerProfile   JobSeekerProfile @relation(fields: [jobSeekerProfileId], references: [id])
+  jobSeekerProfileId String
 
-  jobTitle             String
-  company              String
-  companyUserId        String?
-  companyUser          User?                @relation("CompanyUserExperiences", fields: [companyUserId], references: [id])
-  location             String?
-  employmentType       String?
-  startDate            DateTime
-  endDate              DateTime?
-  current              Boolean              @default(false)
-  description          String?
-  createdAt            DateTime             @default(now())
-  updatedAt            DateTime             @updatedAt
+  jobTitle       String
+  company        String
+  companyUserId  String?
+  companyUser    User?     @relation("CompanyUserExperiences", fields: [companyUserId], references: [id])
+  location       String?
+  employmentType String?
+  startDate      DateTime
+  endDate        DateTime?
+  current        Boolean   @default(false)
+  description    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   @@index([jobSeekerProfileId])
   @@index([companyUserId])
 }
 
 model Education {
-  id                  String                @id @default(cuid())
-  jobSeekerProfile    JobSeekerProfile      @relation(fields: [jobSeekerProfileId], references: [id])
-  jobSeekerProfileId  String
+  id                 String           @id @default(cuid())
+  jobSeekerProfile   JobSeekerProfile @relation(fields: [jobSeekerProfileId], references: [id])
+  jobSeekerProfileId String
 
-  school              String
-  degreeType          degreeType
-  fieldOfStudy        String?
-  grade               Float
-  StartYear           Int
-  EndYear             Int
-  activites           String?
+  school       String
+  degreeType   degreeType
+  fieldOfStudy String?
+  grade        Float
+  StartYear    Int
+  EndYear      Int
+  activites    String?
 }
 
 model Skill {
-  id    String  @id @default(cuid())
-  name  String  @unique
+  id   String @id @default(cuid())
+  name String @unique
 
   // Many-to-many with profiles
   profiles SkillOnProfile[]
 }
 
 model SkillOnProfile {
-  id        String             @id @default(cuid())
-  skill     Skill              @relation(fields: [skillId], references: [id])
+  id        String           @id @default(cuid())
+  skill     Skill            @relation(fields: [skillId], references: [id])
   skillId   String
-  profile   JobSeekerProfile   @relation(fields: [profileId], references: [id])
+  profile   JobSeekerProfile @relation(fields: [profileId], references: [id])
   profileId String
 
   @@unique([skillId, profileId])
 }
 
 model JobApplication {
-  id         String     @id @default(cuid())
-  userId     String
-  jobId      String
-  appliedAt  DateTime   @default(now())
-  status     String     @default("pending") // Can be updated to enum later (e.g., PENDING, ACCEPTED, REJECTED)
-  coverLetter String?   // Cover letter text
-  resumeUrl  String?    // Resume file URL
+  id          String   @id @default(cuid())
+  userId      String
+  jobId       String
+  appliedAt   DateTime @default(now())
+  status      String   @default("pending") // Can be updated to enum later (e.g., PENDING, ACCEPTED, REJECTED)
+  coverLetter String? // Cover letter text
+  resumeUrl   String? // Resume file URL
 
-  user       User       @relation("UserApplications", fields: [userId], references: [id])
-  job        JobListing @relation("JobApplications", fields: [jobId], references: [id])
+  user User       @relation("UserApplications", fields: [userId], references: [id])
+  job  JobListing @relation("JobApplications", fields: [jobId], references: [id])
 
   @@unique([userId, jobId]) // Prevent duplicate applications
   @@index([userId])
@@ -372,10 +454,10 @@ model JobApplication {
 
 model Session {
   id           String   @id @default(cuid())
-  sessionToken String   @unique@map("session_token")
+  sessionToken String   @unique @map("session_token")
   userId       String   @map("user_id")
   expires      DateTime
-  user         User     @relation(fields:[userId], references:[id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model VerificationToken {
@@ -388,72 +470,72 @@ model VerificationToken {
 }
 
 model Message {
-  id            String    @default(cuid()) @id
-  createdAt     DateTime  @default(now()) @map(name: "created_at")
-  updatedAt     DateTime  @updatedAt @map(name: "updated_at")
-  text          String
-  sender        User      @relation("messagesSent", fields: [senderId], references: [id])
-  senderId      String
-  recipient     User      @relation("messagesReceived", fields: [recipientId], references: [id])
-  recipientId   String
-  readBy        User[]    @relation("messagesRead")
-  deliveredAt   DateTime?
-  readAt        DateTime?
-  
+  id          String    @id @default(cuid())
+  createdAt   DateTime  @default(now()) @map(name: "created_at")
+  updatedAt   DateTime  @updatedAt @map(name: "updated_at")
+  text        String
+  sender      User      @relation("messagesSent", fields: [senderId], references: [id])
+  senderId    String
+  recipient   User      @relation("messagesReceived", fields: [recipientId], references: [id])
+  recipientId String
+  readBy      User[]    @relation("messagesRead")
+  deliveredAt DateTime?
+  readAt      DateTime?
+
   // New fields for advanced features
-  replyTo       String?   // ID of the message being replied to
-  editedAt      DateTime?
-  isEdited      Boolean   @default(false)
-  
+  replyTo  String? // ID of the message being replied to
+  editedAt DateTime?
+  isEdited Boolean   @default(false)
+
   // Relations for new features
-  attachments   MessageAttachment[]
-  reactions     MessageReaction[]
+  attachments MessageAttachment[]
+  reactions   MessageReaction[]
 
   @@index([senderId])
   @@index([recipientId])
 }
 
 model MessageAttachment {
-  id          String   @id @default(cuid())
-  message     Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
-  messageId   String
-  uploadedBy  User     @relation("UserUploads", fields: [uploadedById], references: [id])
+  id           String  @id @default(cuid())
+  message      Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  messageId    String
+  uploadedBy   User    @relation("UserUploads", fields: [uploadedById], references: [id])
   uploadedById String
-  
-  type        String   // 'image', 'video', 'audio', 'document', 'file'
-  url         String
-  filename    String
-  size        Int
-  mimeType    String
-  thumbnail   String?  // For images/videos
-  duration    Int?     // For audio/video
-  
-  createdAt   DateTime @default(now())
-  
+
+  type      String // 'image', 'video', 'audio', 'document', 'file'
+  url       String
+  filename  String
+  size      Int
+  mimeType  String
+  thumbnail String? // For images/videos
+  duration  Int? // For audio/video
+
+  createdAt DateTime @default(now())
+
   @@index([messageId])
   @@index([uploadedById])
 }
 
 model MessageReaction {
-  id        String   @id @default(cuid())
-  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  id        String  @id @default(cuid())
+  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
   messageId String
-  user      User     @relation("UserReactions", fields: [userId], references: [id])
+  user      User    @relation("UserReactions", fields: [userId], references: [id])
   userId    String
-  
+
   emoji     String
   createdAt DateTime @default(now())
-  
+
   @@unique([messageId, userId, emoji]) // Prevent duplicate reactions
   @@index([messageId])
   @@index([userId])
 }
 
 model UserOnlineStatus {
-  id        String   @id @default(cuid())
-  user      User     @relation("UserOnlineStatus", fields: [userId], references: [id])
-  userId    String   @unique
-  
+  id     String @id @default(cuid())
+  user   User   @relation("UserOnlineStatus", fields: [userId], references: [id])
+  userId String @unique
+
   isOnline  Boolean  @default(false)
   lastSeen  DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -466,24 +548,24 @@ model TypingIndicator {
   chatId    String
   isTyping  Boolean  @default(false)
   updatedAt DateTime @updatedAt
-  
+
   @@unique([userId, chatId])
   @@index([chatId])
 }
 
 model AdvertisementRequest {
-  id           String          @id @default(cuid())
-  requesterId  String
-  requester    User            @relation(fields: [requesterId], references: [id])
-  title        String
-  body         String
-  mediaUrl     String?
-  status       AdRequestStatus @default(PENDING)
-  startAt      DateTime?
-  endAt        DateTime?
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
-  placements   AdPlacement[]
+  id          String          @id @default(cuid())
+  requesterId String
+  requester   User            @relation(fields: [requesterId], references: [id])
+  title       String
+  body        String
+  mediaUrl    String?
+  status      AdRequestStatus @default(PENDING)
+  startAt     DateTime?
+  endAt       DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  placements  AdPlacement[]
 
   @@index([status])
   @@index([startAt])
@@ -491,42 +573,42 @@ model AdvertisementRequest {
 }
 
 model AdPlacement {
-  id               String                @id @default(cuid())
-  advertisementId  String
-  advertisement    AdvertisementRequest  @relation(fields: [advertisementId], references: [id])
-  shownCount       Int                   @default(0)
-  lastShownAt      DateTime?
-  createdAt        DateTime              @default(now())
+  id              String               @id @default(cuid())
+  advertisementId String
+  advertisement   AdvertisementRequest @relation(fields: [advertisementId], references: [id])
+  shownCount      Int                  @default(0)
+  lastShownAt     DateTime?
+  createdAt       DateTime             @default(now())
 }
 
 model EmployerProfile {
-  id            String   @id @default(cuid())
-  userId        String   @unique
-  user          User     @relation(fields: [userId], references: [id])
-  companyName   String
-  companyLogo   String?
-  website       String?
-  bio           String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id])
+  companyName String
+  companyLogo String?
+  website     String?
+  bio         String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Payment {
-  id            String        @id @default(cuid())
-  provider      String        @default("chapa")
-  status        PaymentStatus @default(PENDING)
-  amount        Int
-  currency      String        @default("ETB")
-  reference     String        @unique
-  metadata      Json?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id        String        @id @default(cuid())
+  provider  String        @default("chapa")
+  status    PaymentStatus @default(PENDING)
+  amount    Int
+  currency  String        @default("ETB")
+  reference String        @unique
+  metadata  Json?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
 
   // Relations
-  employerId    String
-  employer      User          @relation(fields: [employerId], references: [id])
-  jobId         String?
-  job           JobListing?   @relation(fields: [jobId], references: [id])
+  employerId String
+  employer   User        @relation(fields: [employerId], references: [id])
+  jobId      String?
+  job        JobListing? @relation(fields: [jobId], references: [id])
 
   @@unique([jobId])
 }

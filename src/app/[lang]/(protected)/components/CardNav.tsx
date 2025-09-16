@@ -1,7 +1,7 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 import { ArrowRight } from 'lucide-react';
-// use your own icon import if react-icons is not available
+import { DropdownAvatar } from './DropDownAvatar';
 
 
 type CardNavLink = {
@@ -18,6 +18,9 @@ export type CardNavItem = {
 };
 
 export interface CardNavProps {
+  src: string;
+  name: string;
+  email: string;
   logo: string;
   logoAlt?: string;
   items: CardNavItem[];
@@ -27,9 +30,13 @@ export interface CardNavProps {
   menuColor?: string;
   buttonBgColor?: string;
   buttonTextColor?: string;
+  unreadNotifications?: number;
 }
 
 const CardNav: React.FC<CardNavProps> = ({
+  src,
+  name,
+  email,
   logo,
   logoAlt = 'Logo',
   items,
@@ -38,7 +45,8 @@ const CardNav: React.FC<CardNavProps> = ({
   baseColor = '#fff',
   menuColor,
   buttonBgColor,
-  buttonTextColor
+  buttonTextColor,
+  unreadNotifications
 }) => {
   const [isHamburgerOpen, setIsHamburgerOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -157,11 +165,10 @@ const CardNav: React.FC<CardNavProps> = ({
 
   return (
     <div
-      className={`card-nav-container sticky top-[1.2em] md:top-[2em] z-[99] w-full ${className}`}
     >
       <nav
         ref={navRef}
-        className={`card-nav ${isExpanded ? 'open' : ''} block h-[60px] p-0 rounded-xl shadow-md relative overflow-hidden will-change-[height] mx-auto w-[92%] sm:w-[90%] max-w-[960px]`}
+        className={`card-nav ${isExpanded ? 'open' : ''} block h-[60px] p-0 rounded-xl shadow-2xl relative overflow-hidden will-change-[height] mx-auto w-[92%] sm:w-[90%] max-w-[960px] `}
         style={{ backgroundColor: baseColor }}
       >
         <div className="card-nav-top absolute inset-x-0 top-0 h-[60px] flex items-center justify-between p-2 pl-[1.1rem] z-[2]">
@@ -185,17 +192,11 @@ const CardNav: React.FC<CardNavProps> = ({
             />
           </div>
 
-          <div className="logo-container flex items-center md:absolute md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 order-1 md:order-none">
-            <img src={logo} alt={logoAlt} className="logo h-[28px]" />
-          </div>
+          <a href="/en/dashboard" className="logo-container flex items-center md:absolute md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 order-1 md:order-none">
+            <img src={logo} alt={logoAlt} className="logo h-[90px]" />
+          </a>
 
-          <button
-            type="button"
-            className="card-nav-cta-button hidden md:inline-flex border-0 rounded-[calc(0.75rem-0.2rem)] px-4 h-full font-medium cursor-pointer transition-colors duration-300"
-            style={{ backgroundColor: buttonBgColor, color: buttonTextColor }}
-          >
-            Get Started
-          </button>
+          <DropdownAvatar src={src} name={name} email={email} unreadNotifications={unreadNotifications || 0} />
         </div>
 
         <div

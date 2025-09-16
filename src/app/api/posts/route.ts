@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const cursor = searchParams.get('cursor')
-    const limit = parseInt(searchParams.get("limit") || "10")
+    const limit = parseInt(searchParams.get("limit") || "8")
 
     // Get user's connections
     const user = await prisma.user.findUnique({
@@ -41,10 +41,40 @@ export async function GET(request: NextRequest) {
       user.id // Include user's own posts
     ]
 
-    // Get posts from connections and user
+    // Exclude blocked users (both directions)
+    let blockedUserIds: string[] = []
+    try {
+      const blocks = await (prisma as any).userBlock.findMany({
+        where: {
+          OR: [
+            { blockerId: user.id },
+            { blockedId: user.id }
+          ]
+        },
+        select: { blockerId: true, blockedId: true }
+      })
+      blockedUserIds = blocks.map((b: any) => (b.blockerId === user.id ? b.blockedId : b.blockerId))
+    } catch {}
+
+    // Include followed companies
+    let followedCompanyIds: string[] = []
+    try {
+      const follows = await (prisma as any).companyFollow.findMany({
+        where: { followerId: user.id },
+        select: { companyId: true }
+      })
+      followedCompanyIds = follows.map((f: any) => f.companyId)
+    } catch {}
+
+    // Build allowed author IDs (connections + self + followed companies) minus blocked users
+    const authorIdsSet = new Set<string>([...connectedUserIds, ...followedCompanyIds])
+    for (const b of blockedUserIds) authorIdsSet.delete(b)
+    const authorIds = Array.from(authorIdsSet)
+
+    // Get posts from allowed authors
     const posts = await prisma.post.findMany({
       where: {
-        authorId: { in: connectedUserIds }
+        authorId: { in: authorIds }
       },
       include: {
         author: {
@@ -93,6 +123,53 @@ export async function GET(request: NextRequest) {
     if (posts.length > limit) {
       const next = posts.pop()!
       nextCursor = next.id
+    }
+
+    // If no personalized posts, provide trending posts within last 48 hours
+    if (!posts || posts.length === 0) {
+      const since = new Date(Date.now() - 1000 * 60 * 60 * 48)
+
+      // Exclude blocked authors from trending as well
+      const blockedSet = new Set(blockedUserIds)
+
+      const candidates = await prisma.post.findMany({
+        where: {
+          createdAt: { gte: since },
+          authorId: blockedUserIds.length ? { notIn: Array.from(blockedSet) } : undefined,
+        },
+        include: {
+          author: {
+            select: { id: true, name: true, image: true, headline: true }
+          },
+          likes: {
+            where: { createdAt: { gte: since } },
+            select: { id: true }
+          },
+          comments: {
+            where: { createdAt: { gte: since } },
+            include: { user: { select: { id: true, name: true, image: true } } },
+            orderBy: { createdAt: 'desc' }
+          },
+          bookmarks: {
+            where: { userId: user.id },
+            select: { id: true }
+          },
+          _count: { select: { likes: true, comments: true } }
+        },
+        take: 50
+      })
+
+      // Sort by interaction score (likes + comments in window), break ties by recency
+      const trendingSorted = candidates
+        .sort((a: any, b: any) => {
+          const sa = (a.likes?.length || 0) + (a.comments?.length || 0)
+          const sb = (b.likes?.length || 0) + (b.comments?.length || 0)
+          if (sb !== sa) return sb - sa
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        })
+        .slice(0, limit)
+
+      return NextResponse.json({ posts: [], nextCursor: null, trending: trendingSorted })
     }
 
     // TODO: inject approved ads at cadence in follow-up
