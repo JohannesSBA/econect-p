@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { UserPlus, Clock, Check, X } from "lucide-react";
 import { toast } from "sonner";
 
-type ConnectionStatus = "NONE" | "PENDING" | "ACCEPTED" | "REJECTED";
+export type ConnectionStatus = "NONE" | "PENDING" | "ACCEPTED" | "REJECTED";
 
 interface ConnectionButtonProps {
   userId: string;
@@ -39,8 +39,12 @@ export default function ConnectionButton({
       setIsRequestSentByMeState(true);
       onStatusChange?.("PENDING", true);
       toast.success("Connection request sent!");
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || "Failed to send connection request");
+    } catch (error: unknown) {
+      const message =
+        axios.isAxiosError(error) && error.response?.data?.error
+          ? error.response.data.error
+          : "Failed to send connection request";
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -53,8 +57,12 @@ export default function ConnectionButton({
       setStatus("ACCEPTED");
       onStatusChange?.("ACCEPTED", false);
       toast.success("Connection accepted!");
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || "Failed to accept connection");
+    } catch (error: unknown) {
+      const message =
+        axios.isAxiosError(error) && error.response?.data?.error
+          ? error.response.data.error
+          : "Failed to accept connection";
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -67,8 +75,12 @@ export default function ConnectionButton({
       setStatus("REJECTED");
       onStatusChange?.("REJECTED", false);
       toast.success("Connection rejected");
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || "Failed to reject connection");
+    } catch (error: unknown) {
+      const message =
+        axios.isAxiosError(error) && error.response?.data?.error
+          ? error.response.data.error
+          : "Failed to reject connection";
+      toast.error(message);
     } finally {
       setLoading(false);
     }

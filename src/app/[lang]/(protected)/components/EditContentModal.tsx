@@ -1,39 +1,67 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Plus, X, Upload, FileText, Calendar, MapPin, GraduationCap, Award, Trash2, Loader2 } from "lucide-react"
-import { toast } from "sonner"
-import axios from "axios"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Plus,
+  X,
+  Upload,
+  FileText,
+  Calendar,
+  MapPin,
+  GraduationCap,
+  Award,
+  Trash2,
+  Loader2,
+} from "lucide-react";
+import { toast } from "sonner";
+import axios from "axios";
+import { useRouter } from "next/navigation";
 
 interface EditContentModalProps {
-  user: { profile: { bio: string }; skills: string[]; id: string }
-  type: "about" | "experience" | "education" | "skills" | "resume"
-  children?: React.ReactNode
-  onUpdate?: () => void
+  user: { profile: { bio: string }; skills: string[]; id: string };
+  type: "about" | "experience" | "education" | "skills" | "resume";
+  children?: React.ReactNode;
+  onUpdate?: () => void;
 }
 
-export function EditContentModal({ type, children, onUpdate, user }: EditContentModalProps) {
-  const [open, setOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [skills, setSkills] = useState<string[]>([])
-  const [newSkill, setNewSkill] = useState("")
-  const [resume, setResume] = useState<string | null>(null)
-  const router = useRouter()
+export function EditContentModal({
+  type,
+  children,
+  onUpdate,
+  user,
+}: EditContentModalProps) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [skills, setSkills] = useState<string[]>([]);
+  const [newSkill, setNewSkill] = useState("");
+  const [resume, setResume] = useState<string | null>(null);
+  const router = useRouter();
   // Form states
-  const [aboutText, setAboutText] = useState("")
+  const [aboutText, setAboutText] = useState("");
   const [experienceForm, setExperienceForm] = useState({
     jobTitle: "",
     company: "",
@@ -44,10 +72,12 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
     endDate: "",
     description: "",
     current: false,
-  })
-  const [companyQuery, setCompanyQuery] = useState("")
-  const [companyOptions, setCompanyOptions] = useState<Array<{ id: string; name: string }>>([])
-  const [companyLoading, setCompanyLoading] = useState(false)
+  });
+  const [companyQuery, setCompanyQuery] = useState("");
+  const [companyOptions, setCompanyOptions] = useState<
+    Array<{ id: string; name: string }>
+  >([]);
+  const [companyLoading, setCompanyLoading] = useState(false);
   const [educationForm, setEducationForm] = useState({
     school: "",
     degreeType: "",
@@ -56,162 +86,172 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
     StartYear: "",
     EndYear: "",
     activites: "",
-  })
+  });
 
-    // Load initial data when modal opens
+  // Load initial data when modal opens
   useEffect(() => {
     const loadInitialData = async () => {
-    setLoading(true)
-    try {
-      switch (type) {
-        case "about":
-          const profile = user.profile
-          setAboutText(profile.bio)
-          break
-        case "skills":
-          const skillsData = user.skills
-          setSkills(skillsData)
-          break
-        case "resume":
-          const resumeData = user.id
-          setResume(resumeData)
-          break
-      }
-    } catch (error) {
+      setLoading(true);
+      try {
+        switch (type) {
+          case "about":
+            const profile = user.profile;
+            setAboutText(profile.bio);
+            break;
+          case "skills":
+            const skillsData = user.skills;
+            setSkills(skillsData);
+            break;
+          case "resume":
+            const resumeData = user.id;
+            setResume(resumeData);
+            break;
+        }
+      } catch (error) {
         console.log(error);
-        toast.error("Failed to load data. Please try again.")
-    } finally {
-      setLoading(false)
-    }
-  }
+        toast.error("Failed to load data. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    };
 
     if (open) {
       loadInitialData();
     }
-  }, [open, type])
+  }, [open, type, user]);
 
   const handleSave = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
       switch (type) {
         case "about":
-            await axios.post("/api/me/profile", { about: aboutText })
-          toast.success("About section updated successfully!")
+          await axios.post("/api/me/profile", { about: aboutText });
+          toast.success("About section updated successfully!");
           setTimeout(() => {
-            router.refresh()
-          }, 1000)
-          break
+            router.refresh();
+          }, 1000);
+          break;
 
         case "experience":
-          if (!experienceForm.jobTitle || !experienceForm.company || !experienceForm.startDate) {
-            toast.error("Please fill in all required fields.")
-            return
+          if (
+            !experienceForm.jobTitle ||
+            !experienceForm.company ||
+            !experienceForm.startDate
+          ) {
+            toast.error("Please fill in all required fields.");
+            return;
           }
           await axios.post("/api/me/newExperience", {
             ...experienceForm,
             startDate: new Date(experienceForm.startDate),
-            endDate: experienceForm.endDate ? Number.parseInt(experienceForm.endDate) : undefined,
-          })
-          toast.success("Experience added successfully!")
+            endDate: experienceForm.endDate
+              ? Number.parseInt(experienceForm.endDate)
+              : undefined,
+          });
+          toast.success("Experience added successfully!");
           setTimeout(() => {
-            router.refresh()
-          }, 1000)
-          break
+            router.refresh();
+          }, 1000);
+          break;
 
         case "education":
           if (!educationForm.school) {
-            toast.error("Please fill in all required fields.")
-            return
+            toast.error("Please fill in all required fields.");
+            return;
           }
           await axios.post("/api/me/newEducation", {
             ...educationForm,
             StartYear: Number.parseInt(educationForm.StartYear) || 0,
-            EndYear: educationForm.EndYear ? Number.parseInt(educationForm.EndYear) : undefined,
-          })
-          toast.success("Education added successfully!")
+            EndYear: educationForm.EndYear
+              ? Number.parseInt(educationForm.EndYear)
+              : undefined,
+          });
+          toast.success("Education added successfully!");
           setTimeout(() => {
-            router.refresh()
-          }, 1000)
-          break
+            router.refresh();
+          }, 1000);
+          break;
 
         case "skills":
-          await axios.post("/api/me/skills", { skills })
-          toast.success("Skills updated successfully!")
+          await axios.post("/api/me/skills", { skills });
+          toast.success("Skills updated successfully!");
           setTimeout(() => {
-            router.refresh()
-          }, 1000)
-          break
+            router.refresh();
+          }, 1000);
+          break;
       }
 
-      setOpen(false)
-      onUpdate?.()
+      setOpen(false);
+      onUpdate?.();
     } catch (error) {
-        console.log(error);
-      toast.error("Failed to save changes. Please try again.")
+      console.log(error);
+      toast.error("Failed to save changes. Please try again.");
     } finally {
-      window.location.reload()
-      setLoading(false)
+      window.location.reload();
+      setLoading(false);
     }
-  }
+  };
 
   const addSkill = () => {
     if (newSkill.trim() && !skills.includes(newSkill.trim())) {
-      setSkills([...skills, newSkill.trim()])
-      setNewSkill("")
+      setSkills([...skills, newSkill.trim()]);
+      setNewSkill("");
     }
-  }
+  };
 
   const removeSkill = (skillToRemove: string) => {
-    setSkills(skills.filter((skill) => skill !== skillToRemove))
-  }
+    setSkills(skills.filter((skill) => skill !== skillToRemove));
+  };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
+  const handleFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
 
     // Validate file type
     const allowedTypes = [
       "application/pdf",
       "application/msword",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    ]
+    ];
     if (!allowedTypes.includes(file.type)) {
-      toast.error("Invalid file type. Please upload a PDF, DOC, or DOCX file.")
-      return
+      toast.error("Invalid file type. Please upload a PDF, DOC, or DOCX file.");
+      return;
     }
 
     // Validate file size (5MB max)
     if (file.size > 5 * 1024 * 1024) {
-      toast.error("File size must be less than 5MB.")
-      return
+      toast.error("File size must be less than 5MB.");
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
     try {
-        const uploadedResume = await axios.post("/api/resume", { file })
-      setResume(uploadedResume.data)
-      toast.success("Resume uploaded successfully!")
+      const uploadedResume = await axios.post("/api/resume", { file });
+      setResume(uploadedResume.data);
+      toast.success("Resume uploaded successfully!");
     } catch (error) {
-        console.log(error);
-      toast.error("Failed to upload resume. Please try again.")
+      console.log(error);
+      toast.error("Failed to upload resume. Please try again.");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleDeleteResume = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      await axios.delete("/api/resume")
-      setResume(null)
-      toast.success("Resume deleted successfully!")
+      await axios.delete("/api/resume");
+      setResume(null);
+      toast.success("Resume deleted successfully!");
     } catch (error) {
-        console.log(error);
-      toast.error("Failed to delete resume. Please try again.")
+      console.log(error);
+      toast.error("Failed to delete resume. Please try again.");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const getModalContent = () => {
     if (loading && type !== "resume") {
@@ -222,7 +262,7 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
             <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
           </div>
         ),
-      }
+      };
     }
 
     switch (type) {
@@ -241,12 +281,13 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
                   onChange={(e) => setAboutText(e.target.value)}
                 />
                 <p className="text-sm text-gray-500 mt-1">
-                  Write a compelling summary that highlights your professional background and goals.
+                  Write a compelling summary that highlights your professional
+                  background and goals.
                 </p>
               </div>
             </div>
           ),
-        }
+        };
 
       case "experience":
         return {
@@ -261,7 +302,12 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
                     placeholder="e.g. Software Engineer"
                     className="mt-1"
                     value={experienceForm.jobTitle}
-                    onChange={(e) => setExperienceForm({ ...experienceForm, jobTitle: e.target.value })}
+                    onChange={(e) =>
+                      setExperienceForm({
+                        ...experienceForm,
+                        jobTitle: e.target.value,
+                      })
+                    }
                   />
                 </div>
                 <div>
@@ -272,18 +318,24 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
                     className="mt-1"
                     value={experienceForm.company}
                     onChange={(e) => {
-                      setExperienceForm({ ...experienceForm, company: e.target.value, companyUserId: "" })
-                      const v = e.target.value
-                      setCompanyQuery(v)
+                      setExperienceForm({
+                        ...experienceForm,
+                        company: e.target.value,
+                        companyUserId: "",
+                      });
+                      const v = e.target.value;
+                      setCompanyQuery(v);
                       if (v.trim().length >= 2) {
-                        setCompanyLoading(true)
+                        setCompanyLoading(true);
                         fetch(`/api/company/search?q=${encodeURIComponent(v)}`)
-                          .then(r => r.json())
-                          .then((res) => setCompanyOptions(res?.companies || []))
+                          .then((r) => r.json())
+                          .then((res) =>
+                            setCompanyOptions(res?.companies || []),
+                          )
                           .catch(() => setCompanyOptions([]))
-                          .finally(() => setCompanyLoading(false))
+                          .finally(() => setCompanyLoading(false));
                       } else {
-                        setCompanyOptions([])
+                        setCompanyOptions([]);
                       }
                     }}
                   />
@@ -291,7 +343,9 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
                     <div className="relative">
                       <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded shadow-sm max-h-48 overflow-auto">
                         {companyLoading ? (
-                          <div className="p-2 text-sm text-gray-500">Searching...</div>
+                          <div className="p-2 text-sm text-gray-500">
+                            Searching...
+                          </div>
                         ) : (
                           <>
                             {companyOptions.map((c) => (
@@ -300,16 +354,22 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
                                 key={c.id}
                                 className="w-full text-left px-3 py-2 hover:bg-gray-50"
                                 onClick={() => {
-                                  setExperienceForm({ ...experienceForm, company: c.name, companyUserId: c.id })
-                                  setCompanyQuery("")
-                                  setCompanyOptions([])
+                                  setExperienceForm({
+                                    ...experienceForm,
+                                    company: c.name,
+                                    companyUserId: c.id,
+                                  });
+                                  setCompanyQuery("");
+                                  setCompanyOptions([]);
                                 }}
                               >
                                 {c.name}
                               </button>
                             ))}
                             {companyOptions.length === 0 && (
-                              <div className="p-2 text-sm text-gray-500">No results. Keep typing…</div>
+                              <div className="p-2 text-sm text-gray-500">
+                                No results. Keep typing…
+                              </div>
                             )}
                           </>
                         )}
@@ -329,7 +389,12 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
                       placeholder="e.g. Addis Ababa, Ethiopia"
                       className="pl-10"
                       value={experienceForm.location}
-                      onChange={(e) => setExperienceForm({ ...experienceForm, location: e.target.value })}
+                      onChange={(e) =>
+                        setExperienceForm({
+                          ...experienceForm,
+                          location: e.target.value,
+                        })
+                      }
                     />
                   </div>
                 </div>
@@ -337,7 +402,12 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
                   <Label htmlFor="employmentType">Employment Type</Label>
                   <Select
                     value={experienceForm.employmentType}
-                    onValueChange={(value) => setExperienceForm({ ...experienceForm, employmentType: value })}
+                    onValueChange={(value) =>
+                      setExperienceForm({
+                        ...experienceForm,
+                        employmentType: value,
+                      })
+                    }
                   >
                     <SelectTrigger className="mt-1">
                       <SelectValue placeholder="Select type" />
@@ -362,8 +432,16 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
                       id="startDate"
                       type="month"
                       className="pl-10"
-                      value={experienceForm.startDate.toString().split('T')[0].slice(0,7)}
-                      onChange={(e) => setExperienceForm({ ...experienceForm, startDate: new Date(e.target.value) })}
+                      value={experienceForm.startDate
+                        .toString()
+                        .split("T")[0]
+                        .slice(0, 7)}
+                      onChange={(e) =>
+                        setExperienceForm({
+                          ...experienceForm,
+                          startDate: new Date(e.target.value),
+                        })
+                      }
                     />
                   </div>
                 </div>
@@ -376,8 +454,18 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
                       type="month"
                       className="pl-10"
                       placeholder="Present if current"
-                      value={experienceForm.endDate?.toString().split('T')[0].slice(0,7) || ''}
-                      onChange={(e) => setExperienceForm({ ...experienceForm, endDate: e.target.value })}
+                      value={
+                        experienceForm.endDate
+                          ?.toString()
+                          .split("T")[0]
+                          .slice(0, 7) || ""
+                      }
+                      onChange={(e) =>
+                        setExperienceForm({
+                          ...experienceForm,
+                          endDate: e.target.value,
+                        })
+                      }
                       disabled={experienceForm.current}
                     />
                   </div>
@@ -408,15 +496,21 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
                   placeholder="Describe your responsibilities, achievements, and key projects..."
                   className="min-h-[120px] mt-1"
                   value={experienceForm.description}
-                  onChange={(e) => setExperienceForm({ ...experienceForm, description: e.target.value })}
+                  onChange={(e) =>
+                    setExperienceForm({
+                      ...experienceForm,
+                      description: e.target.value,
+                    })
+                  }
                 />
                 <p className="text-sm text-gray-500 mt-1">
-                  Use bullet points to highlight your key accomplishments and responsibilities.
+                  Use bullet points to highlight your key accomplishments and
+                  responsibilities.
                 </p>
               </div>
             </div>
           ),
-        }
+        };
 
       case "education":
         return {
@@ -433,7 +527,12 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
                       placeholder="e.g. Addis Ababa University"
                       className="pl-10"
                       value={educationForm.school}
-                      onChange={(e) => setEducationForm({ ...educationForm, school: e.target.value })}
+                      onChange={(e) =>
+                        setEducationForm({
+                          ...educationForm,
+                          school: e.target.value,
+                        })
+                      }
                     />
                   </div>
                 </div>
@@ -441,14 +540,20 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
                   <Label htmlFor="degree">Degree</Label>
                   <Select
                     value={educationForm.degreeType}
-                    onValueChange={(value) => setEducationForm({ ...educationForm, degreeType: value })}
+                    onValueChange={(value) =>
+                      setEducationForm({ ...educationForm, degreeType: value })
+                    }
                   >
                     <SelectTrigger className="mt-1">
                       <SelectValue placeholder="Select degree" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="BACHELOR">Bachelor&apos;s Degree</SelectItem>
-                      <SelectItem value="MASTER">Master&apos;s Degree</SelectItem>
+                      <SelectItem value="BACHELOR">
+                        Bachelor&apos;s Degree
+                      </SelectItem>
+                      <SelectItem value="MASTER">
+                        Master&apos;s Degree
+                      </SelectItem>
                       <SelectItem value="PHD">PhD</SelectItem>
                       <SelectItem value="DIPLOMA">Diploma</SelectItem>
                       <SelectItem value="CERTIFICATE">Certificate</SelectItem>
@@ -465,7 +570,12 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
                     placeholder="e.g. Computer Science"
                     className="mt-1"
                     value={educationForm.fieldOfStudy}
-                    onChange={(e) => setEducationForm({ ...educationForm, fieldOfStudy: e.target.value })}
+                    onChange={(e) =>
+                      setEducationForm({
+                        ...educationForm,
+                        fieldOfStudy: e.target.value,
+                      })
+                    }
                   />
                 </div>
                 <div>
@@ -478,21 +588,21 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
                     step="0.01"
                     placeholder="e.g. 3.80"
                     className="mt-1"
-                    value={educationForm.grade ?? ''}
+                    value={educationForm.grade ?? ""}
                     onChange={(e) => {
-                        const raw = e.target.value
-                        // Empty string should clear, otherwise parse to float
-                        if (raw === '') {
-                        setEducationForm({ ...educationForm, grade: 0 })
-                        return
-                        }
-                        const num = parseFloat(raw)
-                        // Only update if it's a valid number in range
-                        if (!isNaN(num) && num >= 0 && num <= 4) {
-                        setEducationForm({ ...educationForm, grade: num })
-                        }
+                      const raw = e.target.value;
+                      // Empty string should clear, otherwise parse to float
+                      if (raw === "") {
+                        setEducationForm({ ...educationForm, grade: 0 });
+                        return;
+                      }
+                      const num = parseFloat(raw);
+                      // Only update if it's a valid number in range
+                      if (!isNaN(num) && num >= 0 && num <= 4) {
+                        setEducationForm({ ...educationForm, grade: num });
+                      }
                     }}
-                    />
+                  />
                 </div>
               </div>
 
@@ -505,7 +615,12 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
                     placeholder="e.g. 2020"
                     className="mt-1"
                     value={educationForm.StartYear}
-                    onChange={(e) => setEducationForm({ ...educationForm, StartYear: e.target.value })}
+                    onChange={(e) =>
+                      setEducationForm({
+                        ...educationForm,
+                        StartYear: e.target.value,
+                      })
+                    }
                   />
                 </div>
                 <div>
@@ -516,7 +631,12 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
                     placeholder="e.g. 2024"
                     className="mt-1"
                     value={educationForm.EndYear}
-                    onChange={(e) => setEducationForm({ ...educationForm, EndYear: e.target.value })}
+                    onChange={(e) =>
+                      setEducationForm({
+                        ...educationForm,
+                        EndYear: e.target.value,
+                      })
+                    }
                   />
                 </div>
               </div>
@@ -528,12 +648,17 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
                   placeholder="List any clubs, organizations, or activites you participated in..."
                   className="min-h-[100px] mt-1"
                   value={educationForm.activites}
-                  onChange={(e) => setEducationForm({ ...educationForm, activites: e.target.value })}
+                  onChange={(e) =>
+                    setEducationForm({
+                      ...educationForm,
+                      activites: e.target.value,
+                    })
+                  }
                 />
               </div>
             </div>
           ),
-        }
+        };
 
       case "skills":
         return {
@@ -550,13 +675,13 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
                     onChange={(e) => setNewSkill(e.target.value)}
                     onKeyPress={(e) => {
                       if (e.key === "Enter") {
-                        e.preventDefault()
-                        addSkill()
+                        e.preventDefault();
+                        addSkill();
                       }
                     }}
                   />
-                  <Button 
-                    onClick={addSkill} 
+                  <Button
+                    onClick={addSkill}
                     className="bg-gradient-to-r from-blue-600 to-purple-600"
                     type="button"
                   >
@@ -571,13 +696,17 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
                 <Label>Your Skills</Label>
                 <div className="flex flex-wrap gap-2 mt-2">
                   {skills.map((skill, index) => (
-                    <Badge key={index} variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-200 pr-1">
+                    <Badge
+                      key={index}
+                      variant="secondary"
+                      className="bg-blue-100 text-blue-700 hover:bg-blue-200 pr-1"
+                    >
                       {skill}
-                      <button 
+                      <button
                         onClick={(e) => {
-                          e.preventDefault()
-                          removeSkill(skill)
-                        }} 
+                          e.preventDefault();
+                          removeSkill(skill);
+                        }}
                         className="ml-2 hover:text-red-600 transition-colors"
                       >
                         <X className="h-3 w-3" />
@@ -586,7 +715,9 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
                   ))}
                 </div>
                 {skills.length === 0 && (
-                  <p className="text-gray-500 text-sm mt-2">No skills added yet. Add your first skill above!</p>
+                  <p className="text-gray-500 text-sm mt-2">
+                    No skills added yet. Add your first skill above!
+                  </p>
                 )}
               </div>
 
@@ -595,10 +726,13 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
                   <div className="flex items-start space-x-2">
                     <Award className="h-5 w-5 text-blue-600 mt-0.5" />
                     <div>
-                      <h4 className="font-medium text-blue-900">Skill Recommendations</h4>
+                      <h4 className="font-medium text-blue-900">
+                        Skill Recommendations
+                      </h4>
                       <p className="text-sm text-blue-700 mt-1">
-                        Add skills that are relevant to your industry and the jobs you&apos;re interested in. Include both
-                        technical and soft skills.
+                        Add skills that are relevant to your industry and the
+                        jobs you&apos;re interested in. Include both technical
+                        and soft skills.
                       </p>
                     </div>
                   </div>
@@ -606,7 +740,7 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
               </Card>
             </div>
           ),
-        }
+        };
 
       case "resume":
         return {
@@ -615,8 +749,12 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
             <div className="space-y-4">
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors">
                 <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Upload your resume</h3>
-                <p className="text-gray-600 mb-4">Drag and drop your resume here, or click to browse</p>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  Upload your resume
+                </h3>
+                <p className="text-gray-600 mb-4">
+                  Drag and drop your resume here, or click to browse
+                </p>
                 <div className="relative">
                   <input
                     type="file"
@@ -642,7 +780,9 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
                     )}
                   </Button>
                 </div>
-                <p className="text-sm text-gray-500 mt-2">Supported formats: PDF, DOC, DOCX (Max 5MB)</p>
+                <p className="text-sm text-gray-500 mt-2">
+                  Supported formats: PDF, DOC, DOCX (Max 5MB)
+                </p>
               </div>
 
               {resume && (
@@ -652,11 +792,13 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
                       <div className="flex items-center space-x-3">
                         <FileText className="h-8 w-8 text-blue-600" />
                         <div>
-                          <p className="font-medium text-gray-900">Current Resume</p>
+                          <p className="font-medium text-gray-900">
+                            Current Resume
+                          </p>
                           <p className="text-sm text-gray-500">{resume}</p>
                           <p className="text-xs text-gray-400">
-                            Uploaded on {new Date(resume).toLocaleDateString()} •{" "}
-                            {/* {Math.round(resume.size / 1024)} KB */}
+                            Uploaded on {new Date(resume).toLocaleDateString()}{" "}
+                            • {/* {Math.round(resume.size / 1024)} KB */}
                           </p>
                         </div>
                       </div>
@@ -671,7 +813,11 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
                           onClick={handleDeleteResume}
                           disabled={loading}
                         >
-                          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                          {loading ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
                         </Button>
                       </div>
                     </div>
@@ -684,7 +830,9 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
                   <div className="flex items-start space-x-2">
                     <FileText className="h-5 w-5 text-green-600 mt-0.5" />
                     <div>
-                      <h4 className="font-medium text-green-900">Resume Tips</h4>
+                      <h4 className="font-medium text-green-900">
+                        Resume Tips
+                      </h4>
                       <ul className="text-sm text-green-700 mt-1 space-y-1">
                         <li>• Keep it to 1-2 pages maximum</li>
                         <li>• Use a clean, professional format</li>
@@ -697,32 +845,42 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
               </Card>
             </div>
           ),
-        }
+        };
 
       default:
-        return { title: "Edit Content", content: <div>Content not found</div> }
+        return { title: "Edit Content", content: <div>Content not found</div> };
     }
-  }
+  };
 
-  const { title, content } = getModalContent()
+  const { title, content } = getModalContent();
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {children || (
-          <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-blue-600 hover:text-blue-700"
+          >
             <Plus className="h-4 w-4" />
           </Button>
         )}
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl font-semibold text-gray-900">{title}</DialogTitle>
+          <DialogTitle className="text-xl font-semibold text-gray-900">
+            {title}
+          </DialogTitle>
         </DialogHeader>
         <div className="py-4">{content}</div>
         {type !== "resume" && (
           <div className="flex justify-end space-x-3 pt-4 border-t">
-            <Button variant="outline" onClick={() => setOpen(false)} disabled={loading}>
+            <Button
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={loading}
+            >
               Cancel
             </Button>
             <Button
@@ -743,5 +901,5 @@ export function EditContentModal({ type, children, onUpdate, user }: EditContent
         )}
       </DialogContent>
     </Dialog>
-  )
+  );
 }

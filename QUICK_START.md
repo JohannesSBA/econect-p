@@ -1,78 +1,93 @@
-# 🚀 Quick Start - Advanced Messaging System
+# 🚀 Quick Start – Econnect Local Stack
 
-## ⚡ Fast Setup
-
-### Option 1: Start Everything at Once (Recommended)
-```bash
-npm run dev
-```
-This will start both the WebSocket server and the Next.js development server automatically.
-
-### Option 2: Start Services Separately
-```bash
-# Terminal 1: Start WebSocket server
-npm run ws
-
-# Terminal 2: Start Next.js app
-npm run dev:next
-```
-
-## 🎯 What's Ready
-
-✅ **Real-time messaging** with WebSocket integration  
-✅ **File attachments** (images, videos, audio, documents)  
-✅ **Message reactions** with emoji support  
-✅ **Typing indicators** and online status  
-✅ **Message search** and filtering  
-✅ **Push notifications** for new messages  
-✅ **Message editing** and deletion  
-✅ **Reply-to messages** functionality  
-
-## 🔧 Database Setup
-
-If you haven't set up the database yet:
-```bash
-npx prisma generate
-npx prisma db push
-npm run seed
-```
-
-## 🌐 Access the Application
-
-1. Open your browser to `http://localhost:3000`
-2. Log in with any seeded user (e.g., `jbekele@bu.edu`)
-3. Navigate to the **Chat** section
-4. Start messaging with real-time features!
-
-## 📱 Test the Features
-
-- **Send messages** with text and file attachments
-- **React to messages** with emojis (👍, ❤️, 😂, etc.)
-- **Search messages** using the search bar
-- **See typing indicators** when someone is typing
-- **Edit/delete** your own messages
-- **Reply to specific messages**
-- **Experience real-time updates** across browser tabs
-
-## 🛠️ Troubleshooting
-
-**WebSocket not connecting?**
-- Use `npm run dev` so the WS server starts automatically
-- Or set `NEXT_PUBLIC_SOCKET_URL` (comma-separated to provide fallbacks), e.g.
-  ```bash
-  NEXT_PUBLIC_SOCKET_URL=ws://localhost:3002
-  ```
-- Check that port 3002 is free and listening
-- Check browser console for connection errors
-
-**File uploads not working?**
-- Verify `public/uploads/` directory exists
-- Check file size (max 10MB) and type
-
-**Database errors?**
-- Run `npx prisma db push` to sync schema
-- Ensure PostgreSQL is running
+Spin up the full experience (Next.js app + Socket.IO server + Postgres) in minutes.
 
 ---
 
-**🎉 Enjoy your advanced LinkedIn-style messaging system!** 
+## TL;DR
+```bash
+npm install
+cp .env.example .env
+docker compose up -d
+npx prisma generate
+npx prisma migrate dev --name init
+npm run seed
+npm run dev
+```
+Visit [http://localhost:3000/en](http://localhost:3000/en) once the terminal shows both the WebSocket server and Next.js server are ready.
+
+---
+
+## 1. Provision Local Infrastructure
+- **Database**: `docker compose up -d` launches PostgreSQL 16 + pgAdmin on ports `5432` and `5050`.
+- **Secrets**: copy `.env.example` and adjust values. At minimum set:
+  - `DATABASE_URL`
+  - `NEXTAUTH_SECRET`
+  - `CHAPA_*` keys (use sandbox keys during dev)
+  - `AWS_*` (or legacy `S3*`) for uploads
+
+Need to reset the stack? Run `docker compose down -v`.
+
+---
+
+## 2. Sync Prisma & Seed Data
+Generate the Prisma client and apply the schema:
+```bash
+npx prisma generate
+npx prisma migrate dev --name init
+```
+Seed demo users (admin + sample employer/seeker profiles):
+```bash
+npm run seed
+```
+The seeding script prints usable credentials (e.g., `admin@econnect.et / ChangeMe123!`).
+
+---
+
+## 3. Start Development Servers
+### Option A – Everything together (recommended)
+```bash
+npm run dev
+```
+`start-dev.sh` boots the Socket.IO server first (`ws://localhost:3002`) and then Next.js (`http://localhost:3000`). Both stop when you terminate the process.
+
+### Option B – Run separately
+```bash
+npm run ws        # Socket.IO only
+npm run dev:next  # Next.js only
+```
+Use this when debugging either service individually.
+
+---
+
+## 4. Explore the App
+1. Login at `/en/auth/login` with a seeded account.
+2. Head to `/en/(protected)/dashboard` for personalised feed.
+3. Open `/en/chat` in two browser windows to test real-time messaging, reactions, and typing indicators.
+4. Visit `/en/employer/dashboard` as the seeded employer to create jobs and trigger the Chapa paywall.
+5. Upload resumes or profile photos to verify S3 integration.
+6. Toggle locales between English, Amharic, and Afaan Oromo via the language switcher in the header.
+
+---
+
+## 5. Validate Quality Gates
+| Command | Purpose |
+|---------|---------|
+| `npm run lint` | ESLint (Next + TypeScript rules) |
+| `npm test` | Vitest unit suites + coverage |
+| `npm run test:e2e` | Playwright smoke tests (requires app running separately) |
+| `npm run build` | Production build check |
+
+Before committing, run lint + tests. GitHub Actions (`.github/workflows/ci.yml`) mirrors these steps using `npm ci`.
+
+---
+
+## 6. Helpful Tips
+- **Environment tweaks**: set `NEXT_PUBLIC_SOCKET_URL` to match alternate hosts or secure proxies.
+- **Webhook sandbox**: configure Chapa sandbox callbacks to `http://localhost:3000/api/webhooks/chapa` using a tunneling tool like `ngrok`.
+- **Debugging S3 uploads**: missing credentials throw explicit errors from `src/lib/s3-upload.ts`. Use AWS CLI to verify IAM permissions.
+- **Playwright UI mode**: `npm run test:e2e:ui` opens the Playwright runner for interactive debugging.
+
+---
+
+You're ready to build on top of Econnect. Happy hacking! 🎉

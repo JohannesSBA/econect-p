@@ -76,6 +76,12 @@ enum PostType {
   ARTICLE
 }
 
+enum PostVisibility {
+  PUBLIC
+  PRIVATE
+  UNLISTED
+}
+
 model User {
   id                   String   @id @default(cuid())
   name                 String
@@ -183,9 +189,13 @@ model Post {
   title     String?
   content   String
   type      PostType @default(TEXT)
+  visibility PostVisibility @default(PUBLIC)
   imageUrl  String? // For image posts
   linkUrl   String? // For link posts
+  videoUrl  String? // For video posts
   images    String[] @default([])
+  eventDate DateTime?
+  eventTime String?
   authorId  String
   author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
@@ -198,6 +208,8 @@ model Post {
 
   @@index([authorId])
   @@index([createdAt])
+  @@index([type])
+  @@index([visibility])
 }
 
 // Likes for posts

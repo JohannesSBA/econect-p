@@ -44,7 +44,7 @@ export async function POST(
           reason: reason.trim(),
         },
       })
-    } catch (e: any) {
+    } catch (_error: unknown) {
       // Unique violation -> already reported
     }
 
@@ -54,4 +54,3 @@ export async function POST(
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
-

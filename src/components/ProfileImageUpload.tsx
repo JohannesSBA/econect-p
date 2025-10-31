@@ -10,7 +10,6 @@ import { toast } from "sonner"
 interface ProfileImageUploadProps {
   currentImage?: string
   onImageUpload: (imageUrl: string) => void
-  userId: string
   userName: string
   className?: string
 }
@@ -18,7 +17,6 @@ interface ProfileImageUploadProps {
 export default function ProfileImageUpload({ 
   currentImage, 
   onImageUpload, 
-  userId, 
   userName,
   className = "" 
 }: ProfileImageUploadProps) {

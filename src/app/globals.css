@@ -41,6 +41,8 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --shadow-xs: 0 2px 6px rgba(15, 23, 42, 0.06);
+  --shadow-sm: 0 6px 18px rgba(15, 23, 42, 0.08);
 }
 
 :root {
@@ -149,12 +151,12 @@
 }
 
 * {
-  border-color: hsl(var(--border));
+  border-color: var(--border);
 }
 
 body {
-  background-color: hsl(var(--background));
-  color: hsl(var(--foreground));
+  background-color: var(--background);
+  color: var(--foreground);
   font-feature-settings: "rlig" 1, "calt" 1;
 }
 

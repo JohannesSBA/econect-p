@@ -66,7 +66,7 @@ export default function MessagesSidebar({ contacts, lang, userId }: Props) {
                 }`}
               >
                 <Avatar className="h-10 w-10">
-                  <AvatarImage src={getAvatarUrl(c.image, c.name)} />
+                  <AvatarImage src={getAvatarUrl(c.image, c.name)} alt={c.name} />
                   <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-500 text-white">
                     {c.name
                       .split(' ')

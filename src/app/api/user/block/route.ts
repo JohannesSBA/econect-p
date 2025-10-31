@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
           blockedId: userId,
         }
       })
-    } catch (e: any) {
+    } catch (_error: unknown) {
       // ignore unique constraint (already blocked)
     }
 

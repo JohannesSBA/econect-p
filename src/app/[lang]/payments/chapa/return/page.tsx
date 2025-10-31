@@ -1,9 +1,9 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 
-export default function ChapaReturnPage({ params }: { params: Promise<{ lang: 'en' | 'am' | 'om' }> }) {
+export default function ChapaReturnPage({ params: _params }: { params: Promise<{ lang: 'en' | 'am' | 'om' }> }) {
   const search = useSearchParams();
   const router = useRouter();
   const [status, setStatus] = useState<'pending'|'success'|'failed'>('pending');
@@ -48,8 +48,9 @@ export default function ChapaReturnPage({ params }: { params: Promise<{ lang: 'e
       setMessage('Payment confirmed. Your job is now published.')
       if (data?.jobId) await loadJob(data.jobId)
       setTimeout(() => router.push('/en/employer/jobs/active'), 1500)
-    } catch (e:any) {
-      setMessage(e?.message || 'Confirmation failed.')
+    } catch (error: unknown) {
+      const fallbackMessage = error instanceof Error ? error.message : null
+      setMessage(fallbackMessage || "Confirmation failed.")
     } finally {
       setConfirming(false)
     }

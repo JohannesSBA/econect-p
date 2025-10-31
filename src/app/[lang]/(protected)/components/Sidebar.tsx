@@ -1,56 +1,61 @@
-import { Card, CardContent } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { FileText, Briefcase, Users } from "lucide-react"
-import Link from "next/link"
-import { User } from "@/../types/prisma"
-import { Separator } from "@/components/ui/separator"
-import { getAvatarUrl } from "@/lib/image-utils"
-import { getCurrentUser } from "@/lib/getCurrentUser"
-import prisma from "@/lib/prisma"
+import { Card, CardContent } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { FileText, Briefcase, Users } from "lucide-react";
+import Link from "next/link";
+import { Separator } from "@/components/ui/separator";
+import { getAvatarUrl } from "@/lib/image-utils";
+import { getCurrentUser } from "@/lib/getCurrentUser";
+import prisma from "@/lib/prisma";
+import { User } from "@/../types/prisma";
 
-export default async function Sidebar({ user, lang }: { user: any, lang: 'en' | 'am' | 'om' }) {
-  const current = user ?? await getCurrentUser()
+export default async function Sidebar({
+  user,
+  lang,
+}: {
+  user: User;
+  lang: "en" | "am" | "om";
+}) {
+  const current = user ?? (await getCurrentUser());
 
-  let connectionsCount = 0
-  let postsCount = 0
-  let profileViewsCount = 0 // Profile views are not tracked yet
-  let applicationsCount = 0
-  let interviewsCount = 0
-  let savedJobsCount = 0
+  let connectionsCount = 0;
+  let postsCount = 0;
+  const profileViewsCount = 0; // Profile views are not tracked yet
+  let applicationsCount = 0;
+  let interviewsCount = 0;
+  let savedJobsCount = 0;
 
   if (current?.id) {
     const [conn, posts, apps, interviews, saved] = await Promise.all([
       prisma.connection.count({
         where: {
-          status: 'ACCEPTED',
-          OR: [
-            { senderId: current.id },
-            { receiverId: current.id }
-          ]
-        }
+          status: "ACCEPTED",
+          OR: [{ senderId: current.id }, { receiverId: current.id }],
+        },
       }),
       prisma.post.count({ where: { authorId: current.id } }),
       prisma.jobApplication.count({ where: { userId: current.id } }),
-      prisma.jobApplication.count({ where: { userId: current.id, status: 'INTERVIEWED' } }),
-      prisma.jobBookmark.count({ where: { userId: current.id } })
-    ])
+      prisma.jobApplication.count({
+        where: { userId: current.id, status: "INTERVIEWED" },
+      }),
+      prisma.jobBookmark.count({ where: { userId: current.id } }),
+    ]);
 
-    connectionsCount = conn
-    postsCount = posts
-    applicationsCount = apps
-    interviewsCount = interviews
-    savedJobsCount = saved
+    connectionsCount = conn;
+    postsCount = posts;
+    applicationsCount = apps;
+    interviewsCount = interviews;
+    savedJobsCount = saved;
   }
   return (
-    <div className="lg:col-span-1 space-y-6 md:sticky top-20 self-start">
+    <aside className="space-y-6 lg:sticky lg:top-28">
       {/* Profile Card */}
       <Card className="bg-white shadow-sm">
         <CardContent className="p-4">
           <div className="flex items-center space-x-3 mb-4">
             <Avatar className="h-12 w-12">
-              <AvatarImage src={getAvatarUrl((current as any)?.image, current?.name)} />
+              <AvatarImage src={getAvatarUrl(current?.image, current?.name)} />
               <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-500 text-white">
                 {current?.name?.charAt(0)?.toUpperCase() || "U"}
               </AvatarFallback>
@@ -121,11 +126,19 @@ export default async function Sidebar({ user, lang }: { user: any, lang: 'en' | 
           </div>
         </CardContent>
       </Card>
-      {current?.role && (current.role === 'EMPLOYER' || current.role === 'ADMIN' || current.role === 'RECRUITER') && (
-        <div className="mt-4">
-          <Link className="text-blue-600 hover:underline" href={`/${lang}/employer/dashboard`}>Employer Dashboard</Link>
-        </div>
-      )}
-    </div>
-  )
+      {current?.role &&
+        (current.role === "EMPLOYER" ||
+          current.role === "ADMIN" ||
+          current.role === "RECRUITER") && (
+          <div className="mt-4">
+            <Link
+              className="text-blue-600 hover:underline"
+              href={`/${lang}/employer/dashboard`}
+            >
+              Employer Dashboard
+            </Link>
+          </div>
+        )}
+    </aside>
+  );
 }

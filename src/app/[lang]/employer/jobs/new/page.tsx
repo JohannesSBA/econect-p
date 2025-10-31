@@ -13,7 +13,7 @@ import { toast } from "sonner";
 
 type LangParam = { lang: "en" | "am" | "om" };
 
-export default function NewEmployerJobPage({ params }: { params: Promise<LangParam> }) {
+export default function NewEmployerJobPage({ params: _params }: { params: Promise<LangParam> }) {
   const [title, setTitle] = useState("");
   const [company, setCompany] = useState("");
   const [location, setLocation] = useState("");

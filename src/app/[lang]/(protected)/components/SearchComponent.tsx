@@ -1,15 +1,34 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Search, Users, Briefcase, FileText, X, MapPin, Building, Heart, MessageCircle } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Pagination } from '@/components/ui/pagination';
-import axios from 'axios';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentType,
+  type MouseEvent as ReactMouseEvent,
+} from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import axios from "axios";
+import {
+  Briefcase,
+  Building,
+  FileText,
+  Heart,
+  MapPin,
+  MessageCircle,
+  Search,
+  Users,
+  X,
+} from "lucide-react";
+
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Pagination } from "@/components/ui/pagination";
 
 interface SearchResult {
   people: Array<{
@@ -59,100 +78,140 @@ interface SearchResult {
   };
 }
 
-export default function SearchComponent() {
-  const [query, setQuery] = useState('');
+interface SearchComponentProps {
+  lang?: string;
+}
+
+const searchTabs: Array<{
+  key: "all" | "people" | "jobs" | "posts";
+  label: string;
+  icon: ComponentType<{ className?: string }>;
+}> = [
+  { key: "all", label: "All", icon: Search },
+  { key: "people", label: "People", icon: Users },
+  { key: "jobs", label: "Jobs", icon: Briefcase },
+  { key: "posts", label: "Posts", icon: FileText },
+];
+
+export default function SearchComponent({ lang }: SearchComponentProps) {
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const resolvedLang = useMemo(() => {
+    if (lang) return lang;
+    if (!pathname) return "en";
+    const segments = pathname.split("/").filter(Boolean);
+    return segments[0] ?? "en";
+  }, [lang, pathname]);
+
+  const searchRef = useRef<HTMLDivElement>(null);
+  const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
-  const [searchType, setSearchType] = useState<'all' | 'people' | 'jobs' | 'posts'>('all');
+  const [searchType, setSearchType] = useState<
+    "all" | "people" | "jobs" | "posts"
+  >("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const searchRef = useRef<HTMLDivElement>(null);
-  const router = useRouter();
 
-  // Close results when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+      if (
+        searchRef.current &&
+        !searchRef.current.contains(event.target as Node)
+      ) {
         setShowResults(false);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Search function with debouncing
+  const performSearch = useCallback(
+    async (page: number) => {
+      if (!query.trim()) return;
+
+      setIsLoading(true);
+      try {
+        const response = await axios.get(
+          `/api/search?q=${encodeURIComponent(query)}&type=${searchType}&page=${page}&limit=5`,
+        );
+        setResults(response.data as SearchResult);
+        setShowResults(true);
+      } catch (error) {
+        console.error("Search error:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [query, searchType],
+  );
+
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
+    const timeoutId = window.setTimeout(() => {
       if (query.trim().length >= 2) {
-        setCurrentPage(1); // Reset to first page for new searches
-        performSearch();
+        setCurrentPage(1);
+        void performSearch(1);
       } else {
         setResults(null);
         setShowResults(false);
       }
-    }, 300);
+    }, 250);
 
-    return () => clearTimeout(timeoutId);
-  }, [query, searchType]);
+    return () => window.clearTimeout(timeoutId);
+  }, [query, searchType, performSearch]);
 
-  // Handle page changes
   useEffect(() => {
-    if (query.trim().length >= 2 && currentPage > 1) {
-      performSearch();
+    if (query.trim().length >= 2 && currentPage !== 1) {
+      void performSearch(currentPage);
     }
-  }, [currentPage]);
-
-  const performSearch = async () => {
-    if (!query.trim()) return;
-
-    setIsLoading(true);
-    try {
-      const response = await axios.get(`/api/search?q=${encodeURIComponent(query)}&type=${searchType}&page=${currentPage}&limit=5`);
-      setResults(response.data);
-      setShowResults(true);
-    } catch (error) {
-      console.error('Search error:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [currentPage, performSearch, query]);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
 
-  const handleResultClick = (type: string, id: string) => {
+  const handleResultClick = (
+    type: "people" | "company" | "jobs" | "posts",
+    id: string,
+  ) => {
     setShowResults(false);
-    setQuery('');
+    setQuery("");
     setCurrentPage(1);
-    
+
     switch (type) {
-      case 'people':
-        router.push(`/en/user/${id}`);
+      case "people":
+        router.push(`/${resolvedLang}/user/${id}`);
         break;
-      case 'company':
-        router.push(`/en/company/${id}`);
+      case "company":
+        router.push(`/${resolvedLang}/company/${id}`);
         break;
-      case 'jobs':
-        router.push(`/en/jobs/${id}`);
+      case "jobs":
+        router.push(`/${resolvedLang}/jobs/${id}`);
         break;
-      case 'posts':
-        router.push(`/en/dashboard?post=${id}`);
+      case "posts":
+        router.push(`/${resolvedLang}/dashboard?post=${id}`);
         break;
     }
   };
 
-  const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
-  };
+  const getInitials = (name: string) =>
+    name
+      .split(" ")
+      .filter(Boolean)
+      .map((segment) => segment[0])
+      .join("")
+      .toUpperCase();
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-    
-    if (diffInHours < 1) return 'Just now';
+    const diffInHours = Math.floor(
+      (now.getTime() - date.getTime()) / (1000 * 60 * 60),
+    );
+
+    if (diffInHours < 1) return "Just now";
     if (diffInHours < 24) return `${diffInHours}h ago`;
     if (diffInHours < 168) return `${Math.floor(diffInHours / 24)}d ago`;
     return date.toLocaleDateString();
@@ -160,54 +219,73 @@ export default function SearchComponent() {
 
   const truncateText = (text: string, maxLength: number) => {
     if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength) + '...';
+    return `${text.substring(0, maxLength)}...`;
   };
 
+  const handleTabClick = (
+    event: ReactMouseEvent<HTMLButtonElement>,
+    key: "all" | "people" | "jobs" | "posts",
+  ) => {
+    event.preventDefault();
+    setSearchType(key);
+  };
+
+  const hasPeopleResults =
+    results &&
+    results.people &&
+    results.people.length > 0 &&
+    (searchType === "all" || searchType === "people");
+  const hasJobResults =
+    results &&
+    results.jobs &&
+    results.jobs.length > 0 &&
+    (searchType === "all" || searchType === "jobs");
+  const hasPostResults =
+    results &&
+    results.posts &&
+    results.posts.length > 0 &&
+    (searchType === "all" || searchType === "posts");
+
   return (
-    <div ref={searchRef} className="relative z-100">
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+    <div ref={searchRef} className="relative z-[60] w-full min-w-0">
+      <div className="relative flex items-center">
+        <Search className="pointer-events-none absolute left-3 h-4 w-4 text-slate-400" />
         <Input
-          placeholder="Search people, jobs, posts..."
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(event) => setQuery(event.target.value)}
           onFocus={() => query.trim().length >= 2 && setShowResults(true)}
-          className="pl-10 w-64 bg-gray-100 border-0 focus:bg-white focus:ring-2 focus:ring-blue-500"
+          placeholder="Search people, jobs, posts..."
+          className="w-full rounded-full border border-slate-200 bg-slate-100 pl-10 pr-9 text-sm transition focus:border-blue-200 focus:bg-white focus:ring-2 focus:ring-blue-500/40"
         />
         {query && (
           <Button
+            type="button"
             variant="ghost"
-            size="sm"
+            size="icon"
             onClick={() => {
-              setQuery('');
+              setQuery("");
               setResults(null);
               setShowResults(false);
               setCurrentPage(1);
             }}
-            className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+            className="absolute right-1.5 h-7 w-7 rounded-full text-slate-500 hover:bg-slate-200"
           >
-            <X className="h-3 w-3" />
+            <X className="h-3.5 w-3.5" />
           </Button>
         )}
       </div>
 
-      {/* Search Type Filter */}
       {showResults && (
-        <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-150 mt-1">
-          <div className="flex border-b border-gray-100">
-            {[
-              { key: 'all', label: 'All', icon: Search },
-              { key: 'people', label: 'People', icon: Users },
-              { key: 'jobs', label: 'Jobs', icon: Briefcase },
-              { key: 'posts', label: 'Posts', icon: FileText },
-            ].map(({ key, label, icon: Icon }) => (
+        <div className="absolute left-0 right-0 mt-2 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl drop-shadow-lg sm:max-w-xl">
+          <div className="flex flex-wrap gap-1 border-b border-slate-100 bg-slate-50/80 p-2">
+            {searchTabs.map(({ key, label, icon: Icon }) => (
               <button
                 key={key}
-                onClick={() => setSearchType(key as 'all' | 'people' | 'jobs' | 'posts')}
-                className={`flex items-center space-x-2 px-4 py-2 text-sm font-medium ${
+                onClick={(event) => handleTabClick(event, key)}
+                className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 ${
                   searchType === key
-                    ? 'text-blue-600 border-b-2 border-blue-600'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "bg-white text-slate-600 hover:bg-slate-100"
                 }`}
               >
                 <Icon className="h-4 w-4" />
@@ -216,160 +294,225 @@ export default function SearchComponent() {
             ))}
           </div>
 
-          {/* Results */}
-          <div className="max-h-96 overflow-y-auto">
+          <div className="max-h-[26rem] overflow-y-auto p-3">
             {isLoading ? (
-              <div className="p-4 text-center text-gray-500">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
-                <p className="mt-2">Searching...</p>
+              <div className="flex flex-col items-center gap-2 py-6 text-xs text-slate-500">
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-200 border-t-transparent" />
+                Searching...
               </div>
             ) : results && results.totalResults > 0 ? (
-              <div>
-                {/* People Results */}
-                {results.people.length > 0 && (searchType === 'all' || searchType === 'people') && (
-                  <div className="border-b border-gray-100">
-                    <div className="px-4 py-2 bg-gray-50 text-xs font-medium text-gray-500 uppercase tracking-wide">
-                      People ({results.people.length})
-                    </div>
-                    {results.people.map((person) => (
-                      <div
-                        key={person.id}
-                        onClick={() => handleResultClick(person.role === 'EMPLOYER' ? 'company' : 'people', person.id)}
-                        className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 cursor-pointer"
+              <div className="space-y-6">
+                {hasPeopleResults && (
+                  <section>
+                    <header className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      <span>People</span>
+                      <Badge
+                        variant="secondary"
+                        className="rounded-full px-2 py-0 text-[10px]"
                       >
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={person.image || undefined} />
-                          <AvatarFallback>{getInitials(person.name)}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center space-x-2">
-                            <p className="text-sm font-medium text-gray-900 truncate">{person.name}</p>
-                            <Badge variant="secondary" className="text-xs">
-                              {person.role}
-                            </Badge>
-                          </div>
-                          {person.headline && (
-                            <p className="text-xs text-gray-600 truncate">{person.headline}</p>
-                          )}
-                          {person.location && (
-                            <div className="flex items-center space-x-1 mt-1">
-                              <MapPin className="h-3 w-3 text-gray-400" />
-                              <p className="text-xs text-gray-500">{person.location}</p>
+                        {results.people.length}
+                      </Badge>
+                    </header>
+                    <ul className="space-y-2">
+                      {results.people.map((person) => (
+                        <li key={person.id}>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleResultClick(
+                                person.role === "EMPLOYER"
+                                  ? "company"
+                                  : "people",
+                                person.id,
+                              )
+                            }
+                            className="flex w-full items-center gap-3 rounded-xl border border-transparent bg-white px-3 py-2 text-left transition hover:border-blue-200 hover:bg-blue-50/60"
+                          >
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={person.image || undefined} />
+                              <AvatarFallback>
+                                {getInitials(person.name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="text-sm font-medium text-slate-900 line-clamp-1">
+                                  {person.name}
+                                </p>
+                                <Badge
+                                  variant="secondary"
+                                  className="rounded-full bg-slate-100 text-[11px]"
+                                >
+                                  {person.role}
+                                </Badge>
+                              </div>
+                              {person.headline && (
+                                <p className="text-xs text-slate-600 line-clamp-1">
+                                  {person.headline}
+                                </p>
+                              )}
+                              {person.location && (
+                                <div className="mt-1 flex items-center gap-1 text-[11px] text-slate-500">
+                                  <MapPin className="h-3 w-3" />
+                                  <span className="line-clamp-1">
+                                    {person.location}
+                                  </span>
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
                 )}
 
-                {/* Jobs Results */}
-                {results.jobs.length > 0 && (searchType === 'all' || searchType === 'jobs') && (
-                  <div className="border-b border-gray-100">
-                    <div className="px-4 py-2 bg-gray-50 text-xs font-medium text-gray-500 uppercase tracking-wide">
-                      Jobs ({results.jobs.length})
-                    </div>
-                    {results.jobs.map((job) => (
-                      <div
-                        key={job.id}
-                        onClick={() => handleResultClick('jobs', job.id)}
-                        className="flex items-start space-x-3 px-4 py-3 hover:bg-gray-50 cursor-pointer"
+                {hasJobResults && (
+                  <section>
+                    <header className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      <span>Jobs</span>
+                      <Badge
+                        variant="secondary"
+                        className="rounded-full px-2 py-0 text-[10px]"
                       >
-                        <div className="h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                          <Building className="h-5 w-5 text-blue-600" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center space-x-2">
-                            <p className="text-sm font-medium text-gray-900 truncate">{job.title}</p>
-                            {job.hasApplied && (
-                              <Badge variant="outline" className="text-xs text-green-600 border-green-600">
-                                Applied
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-xs text-gray-600 truncate">{job.company}</p>
-                          <div className="flex items-center space-x-4 mt-1">
-                            <div className="flex items-center space-x-1">
-                              <MapPin className="h-3 w-3 text-gray-400" />
-                              <p className="text-xs text-gray-500">{job.location}</p>
+                        {results.jobs.length}
+                      </Badge>
+                    </header>
+                    <ul className="space-y-2">
+                      {results.jobs.map((job) => (
+                        <li key={job.id}>
+                          <button
+                            type="button"
+                            onClick={() => handleResultClick("jobs", job.id)}
+                            className="flex w-full items-start gap-3 rounded-xl border border-transparent bg-white px-3 py-2 text-left transition hover:border-blue-200 hover:bg-blue-50/60"
+                          >
+                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50">
+                              <Building className="h-5 w-5 text-blue-600" />
                             </div>
-                            <Badge variant="secondary" className="text-xs">
-                              {job.jobType}
-                            </Badge>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="text-sm font-medium text-slate-900 line-clamp-1">
+                                  {job.title}
+                                </p>
+                                {job.hasApplied && (
+                                  <Badge
+                                    variant="outline"
+                                    className="rounded-full border-green-500 bg-green-50 text-[11px] text-green-600"
+                                  >
+                                    Applied
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-xs text-slate-600 line-clamp-1">
+                                {job.company}
+                              </p>
+                              <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px] text-slate-500">
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="h-3 w-3" />
+                                  {job.location}
+                                </span>
+                                <Badge
+                                  variant="secondary"
+                                  className="rounded-full bg-slate-100 text-[11px]"
+                                >
+                                  {job.jobType}
+                                </Badge>
+                              </div>
+                            </div>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
                 )}
 
-                {/* Posts Results */}
-                {results.posts.length > 0 && (searchType === 'all' || searchType === 'posts') && (
-                  <div>
-                    <div className="px-4 py-2 bg-gray-50 text-xs font-medium text-gray-500 uppercase tracking-wide">
-                      Posts ({results.posts.length})
-                    </div>
-                    {results.posts.map((post) => (
-                      <div
-                        key={post.id}
-                        onClick={() => handleResultClick('posts', post.id)}
-                        className="flex items-start space-x-3 px-4 py-3 hover:bg-gray-50 cursor-pointer"
+                {hasPostResults && (
+                  <section>
+                    <header className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      <span>Posts</span>
+                      <Badge
+                        variant="secondary"
+                        className="rounded-full px-2 py-0 text-[10px]"
                       >
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={post.author.image || undefined} />
-                          <AvatarFallback>{getInitials(post.author.name)}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center space-x-2">
-                            <p className="text-sm font-medium text-gray-900">{post.author.name}</p>
-                            <span className="text-xs text-gray-500">•</span>
-                            <span className="text-xs text-gray-500">{formatDate(post.createdAt)}</span>
-                          </div>
-                          <p className="text-sm text-gray-700 mt-1 line-clamp-2">
-                            {truncateText(post.content, 100)}
-                          </p>
-                          <div className="flex items-center space-x-4 mt-2">
-                            <div className="flex items-center space-x-1">
-                              <Heart className={`h-3 w-3 ${post.isLiked ? 'text-red-500 fill-current' : 'text-gray-400'}`} />
-                              <span className="text-xs text-gray-500">{post.likeCount}</span>
+                        {results.posts.length}
+                      </Badge>
+                    </header>
+                    <ul className="space-y-2">
+                      {results.posts.map((post) => (
+                        <li key={post.id}>
+                          <button
+                            type="button"
+                            onClick={() => handleResultClick("posts", post.id)}
+                            className="flex w-full items-start gap-3 rounded-xl border border-transparent bg-white px-3 py-2 text-left transition hover:border-blue-200 hover:bg-blue-50/60"
+                          >
+                            <Avatar className="h-9 w-9">
+                              <AvatarImage
+                                src={post.author.image || undefined}
+                              />
+                              <AvatarFallback>
+                                {getInitials(post.author.name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                                <span className="font-medium text-slate-900">
+                                  {post.author.name}
+                                </span>
+                                <span>•</span>
+                                <span>{formatDate(post.createdAt)}</span>
+                              </div>
+                              <p className="mt-1 text-sm text-slate-700 line-clamp-2">
+                                {truncateText(post.content, 120)}
+                              </p>
+                              <div className="mt-2 flex items-center gap-4 text-[11px] text-slate-500">
+                                <span className="flex items-center gap-1">
+                                  <Heart
+                                    className={`h-3.5 w-3.5 ${
+                                      post.isLiked
+                                        ? "fill-red-500 text-red-500"
+                                        : "text-slate-400"
+                                    }`}
+                                  />
+                                  {post.likeCount}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <MessageCircle className="h-3.5 w-3.5 text-slate-400" />
+                                  {post.commentCount}
+                                </span>
+                              </div>
                             </div>
-                            <div className="flex items-center space-x-1">
-                              <MessageCircle className="h-3 w-3 text-gray-400" />
-                              <span className="text-xs text-gray-500">{post.commentCount}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
                 )}
 
-                {/* Pagination */}
-                {results.pagination.totalPages > 1 && (
-                  <div className="border-t border-gray-100 px-4 py-3">
+                {results && results.pagination.totalPages > 1 && (
+                  <div className="border-t border-slate-100 pt-4">
                     <Pagination
                       currentPage={results.pagination.page}
                       totalPages={results.pagination.totalPages}
                       onPageChange={handlePageChange}
-                      className="text-sm"
                     />
                   </div>
                 )}
               </div>
             ) : query.trim().length >= 2 ? (
-              <div className="p-4 text-center text-gray-500">
-                <p>No results found for &quot;{query}&quot;</p>
-                <p className="text-xs mt-1">Try different keywords or search type</p>
+              <div className="py-6 text-center text-sm text-slate-500">
+                <p>No results found for “{query}”.</p>
+                <p className="mt-1 text-xs text-slate-400">
+                  Try different keywords or switch tabs.
+                </p>
               </div>
             ) : null}
           </div>
 
-          {/* View All Results */}
           {results && results.totalResults > 0 && (
-            <div className="border-t border-gray-100 px-4 py-2">
+            <div className="border-t border-slate-100 bg-slate-50/60 px-4 py-2 text-right">
               <Link
-                href={`/en/search?q=${encodeURIComponent(query)}&type=${searchType}`}
-                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                href={`/${resolvedLang}/search?q=${encodeURIComponent(query)}&type=${searchType}`}
+                className="text-sm font-medium text-blue-600 transition hover:text-blue-700"
               >
                 View all {results.totalResults} results →
               </Link>
@@ -379,4 +522,4 @@ export default function SearchComponent() {
       )}
     </div>
   );
-} 
+}

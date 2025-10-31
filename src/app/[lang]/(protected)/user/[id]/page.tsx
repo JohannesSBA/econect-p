@@ -1,10 +1,8 @@
-import { Button } from "@/components/ui/button"
 import Header from "../../components/Header"
 import { getCurrentUser } from "@/lib/getCurrentUser"
 import { User } from "@/../types/prisma"
 import prisma from "@/lib/prisma"
 import { notFound, redirect } from "next/navigation"
-import Link from "next/link"
 import UserProfileClient from "./UserProfileClient"
 
 interface UserProfilePageProps {
@@ -69,9 +67,8 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
     },
   })
 
-  const isConnected = connection?.status === 'ACCEPTED'
-  const hasPendingRequest = connection?.status === 'PENDING'
-  const isRequestSentByMe = hasPendingRequest && connection.senderId === currentUser.id
+  const isRequestSentByMe =
+    connection?.status === "PENDING" && connection?.senderId === currentUser.id
 
   // Real connection count for viewed user
   const connectionCount = await prisma.connection.count({
@@ -138,8 +135,6 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
         currentUser={currentUser}
         user={user}
         connection={connection}
-        isConnected={isConnected}
-        hasPendingRequest={hasPendingRequest}
         isRequestSentByMe={isRequestSentByMe}
         connectionCount={connectionCount}
         peopleAlsoViewed={peopleAlsoViewed as any}

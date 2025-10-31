@@ -1,26 +1,30 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import Header from "../components/Header"
-import prisma from "@/lib/prisma"
-import { getCurrentUser } from "@/lib/getCurrentUser"
-import { User } from "@/../types/prisma"
-import BlockedListClient from "./BlockedListClient"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Header from "../components/Header";
+import prisma from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/getCurrentUser";
+import { User } from "@/../types/prisma";
+import BlockedListClient from "./BlockedListClient";
 
-export default async function BlockedUsersPage({ params }: { params: Promise<{ lang: 'en' | 'am' }> }) {
-  const { lang } = await params
-  const currentUser = await getCurrentUser() as unknown as User
+export default async function BlockedUsersPage({
+  params,
+}: {
+  params: Promise<{ lang: "en" | "am"; id: string }>;
+}) {
+  const { lang } = await params;
+  const currentUser = (await getCurrentUser()) as unknown as User;
 
   // Fetch users this user has blocked
-  const blocks = await (prisma as any).userBlock.findMany({
+  const blocks = await prisma.userBlock.findMany({
     where: { blockerId: currentUser.id },
     include: {
       blocked: {
-        select: { id: true, name: true, image: true, headline: true }
-      }
+        select: { id: true, name: true, image: true, headline: true },
+      },
     },
-    orderBy: { createdAt: 'desc' }
-  })
+    orderBy: { createdAt: "desc" },
+  });
 
-  const blocked = blocks.map((b: any) => b.blocked)
+  const blocked = blocks.map((block) => block.blocked);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -38,6 +42,5 @@ export default async function BlockedUsersPage({ params }: { params: Promise<{ l
         </div>
       </div>
     </div>
-  )
+  );
 }
-

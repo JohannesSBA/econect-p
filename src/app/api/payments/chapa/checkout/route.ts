@@ -2,9 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import prisma from "@/lib/prisma";
-import crypto from "crypto";
-
-const CHAPA_SECRET_KEY = process.env.CHAPA_SECRET_KEY || "";
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -69,7 +66,6 @@ export async function POST(req: NextRequest) {
   const redirect_url = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/payments/chapa/return`;
   const callback_url = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/webhooks/chapa`;
 
-  const token = crypto.createHash('sha256').update(reference + CHAPA_SECRET_KEY).digest('hex');
   const hosted_url = process.env.NEXT_PUBLIC_CHAPA_PAYMENT_LINK || 'https://checkout.chapa.co/checkout/web/payment/PL-zBZ0KqFcoZmW';
 
   return NextResponse.json({

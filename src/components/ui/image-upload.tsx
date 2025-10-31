@@ -1,110 +1,109 @@
-"use client"
+"use client";
 
-import { useState, useRef } from "react"
-import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Upload, X, Camera } from "lucide-react"
-import { useToast } from "@/components/ui/toast"
+import { useState, useRef } from "react";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { X, Camera } from "lucide-react";
+import { useToast } from "@/components/ui/toast";
 
 interface ImageUploadProps {
-  currentImage?: string
-  onImageUpload: (imageUrl: string) => void
-  type: "profile" | "company"
-  userId: string
-  className?: string
-  size?: "sm" | "md" | "lg"
+  currentImage?: string;
+  onImageUpload: (imageUrl: string) => void;
+  type: "profile" | "company";
+  userId: string;
+  className?: string;
+  size?: "sm" | "md" | "lg";
 }
 
-export default function ImageUpload({ 
-  currentImage, 
-  onImageUpload, 
-  type, 
-  userId, 
+export default function ImageUpload({
+  currentImage,
+  onImageUpload,
+  type,
   className = "",
-  size = "md" 
+  size = "md",
 }: ImageUploadProps) {
-  const [isUploading, setIsUploading] = useState(false)
-  const [previewImage, setPreviewImage] = useState<string | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const { showToast } = useToast()
+  const [isUploading, setIsUploading] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { showToast } = useToast();
 
   const sizeClasses = {
     sm: "h-16 w-16",
     md: "h-24 w-24",
-    lg: "h-32 w-32"
-  }
+    lg: "h-32 w-32",
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const file = e.target.files?.[0];
+    if (!file) return;
 
     // Validate file type
-    if (!file.type.startsWith('image/')) {
-      showToast("Please select an image file", "error")
-      return
+    if (!file.type.startsWith("image/")) {
+      showToast("Please select an image file", "error");
+      return;
     }
 
     // Validate file size (5MB limit)
     if (file.size > 5 * 1024 * 1024) {
-      showToast("Image size must be less than 5MB", "error")
-      return
+      showToast("Image size must be less than 5MB", "error");
+      return;
     }
 
     // Create preview
-    const reader = new FileReader()
+    const reader = new FileReader();
     reader.onload = (e) => {
-      setPreviewImage(e.target?.result as string)
-    }
-    reader.readAsDataURL(file)
+      setPreviewImage(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
 
     // Upload to S3
-    uploadImage(file)
-  }
+    uploadImage(file);
+  };
 
   const uploadImage = async (file: File) => {
-    setIsUploading(true)
+    setIsUploading(true);
 
     try {
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('type', `${type}-image`)
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("type", `${type}-image`);
 
-      const response = await fetch('/api/upload', {
-        method: 'POST',
+      const response = await fetch("/api/upload", {
+        method: "POST",
         body: formData,
-      })
+      });
 
       if (!response.ok) {
-        throw new Error('Upload failed')
+        throw new Error("Upload failed");
       }
 
-      const data = await response.json()
-      onImageUpload(data.fileUrl)
-      showToast("Image uploaded successfully", "success")
+      const data = await response.json();
+      onImageUpload(data.fileUrl);
+      showToast("Image uploaded successfully", "success");
     } catch (error) {
-      console.error('Error uploading image:', error)
-      showToast("Failed to upload image", "error")
-      setPreviewImage(null)
+      console.error("Error uploading image:", error);
+      showToast("Failed to upload image", "error");
+      setPreviewImage(null);
     } finally {
-      setIsUploading(false)
+      setIsUploading(false);
     }
-  }
+  };
 
   const handleRemoveImage = () => {
-    setPreviewImage(null)
-    onImageUpload("")
+    setPreviewImage(null);
+    onImageUpload("");
     if (fileInputRef.current) {
-      fileInputRef.current.value = ""
+      fileInputRef.current.value = "";
     }
-  }
+  };
 
-  const displayImage = previewImage || currentImage
+  const displayImage = previewImage || currentImage;
 
   return (
     <div className={`relative inline-block ${className}`}>
       <Avatar className={`${sizeClasses[size]} border-2 border-gray-200`}>
-        <AvatarImage 
-          src={displayImage || "/placeholder.svg"} 
+        <AvatarImage
+          src={displayImage || "/placeholder.svg"}
           alt="Profile image"
         />
         <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-500 text-white text-lg">
@@ -152,5 +151,5 @@ export default function ImageUpload({
         className="hidden"
       />
     </div>
-  )
-} 
+  );
+}

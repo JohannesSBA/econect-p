@@ -1,37 +1,43 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Loader2 } from "lucide-react"
-import { toast } from "sonner"
-import axios from "axios"
-import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import axios, { AxiosError } from "axios";
+import { useRouter } from "next/navigation";
 
 interface ProfileEditModalProps {
   user: {
-    id: string
-    name: string
-    email: string
-    phone: string
-    headline?: string | null
-    location?: string | null
-    website?: string | null
-    image?: string | null
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+    headline?: string | null;
+    location?: string | null;
+    website?: string | null;
+    image?: string | null;
     profile?: {
-      bio?: string | null
-    } | null
-  }
-  children?: React.ReactNode
+      bio?: string | null;
+    } | null;
+  };
+  children?: React.ReactNode;
 }
 
 export function ProfileEditModal({ user, children }: ProfileEditModalProps) {
-  const [open, setOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const router = useRouter()
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   // Form state
   const [formData, setFormData] = useState({
@@ -40,11 +46,11 @@ export function ProfileEditModal({ user, children }: ProfileEditModalProps) {
     location: user.location || "",
     website: user.website || "",
     bio: user.profile?.bio || "",
-  })
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
+    e.preventDefault();
+    setLoading(true);
 
     try {
       // Update user profile
@@ -53,66 +59,67 @@ export function ProfileEditModal({ user, children }: ProfileEditModalProps) {
         headline: formData.headline,
         location: formData.location,
         website: formData.website,
-      })
+      });
 
       // Update bio if it exists
       if (formData.bio !== user.profile?.bio) {
         await axios.post("/api/me/profile", {
-          about: formData.bio
-        })
+          about: formData.bio,
+        });
       }
 
-      toast.success("Profile updated successfully!")
-      setOpen(false)
-      router.refresh()
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || "Failed to update profile")
+      toast.success("Profile updated successfully!");
+      setOpen(false);
+      router.refresh();
+    } catch (error) {
+      toast.error(
+        ((error as AxiosError).response?.data as string) ||
+          "Failed to update profile",
+      );
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   // Open the modal automatically when URL has #settings
   useEffect(() => {
-    if (typeof window === 'undefined') return
-    if (window.location.hash === '#settings') {
-      setOpen(true)
+    if (typeof window === "undefined") return;
+    if (window.location.hash === "#settings") {
+      setOpen(true);
     }
 
     const onHashChange = () => {
-      if (window.location.hash === '#settings') {
-        setOpen(true)
+      if (window.location.hash === "#settings") {
+        setOpen(true);
       }
-    }
-    window.addEventListener('hashchange', onHashChange)
-    return () => window.removeEventListener('hashchange', onHashChange)
-  }, [])
+    };
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
 
   const handleOpenChange = (next: boolean) => {
-    setOpen(next)
-    if (typeof window === 'undefined') return
+    setOpen(next);
+    if (typeof window === "undefined") return;
     try {
       if (next) {
-        if (window.location.hash !== '#settings') {
-          const url = new URL(window.location.href)
-          url.hash = '#settings'
-          window.history.replaceState(null, '', url.toString())
+        if (window.location.hash !== "#settings") {
+          const url = new URL(window.location.href);
+          url.hash = "#settings";
+          window.history.replaceState(null, "", url.toString());
         }
       } else {
-        if (window.location.hash === '#settings') {
-          const url = new URL(window.location.href)
-          url.hash = ''
-          window.history.replaceState(null, '', url.pathname + url.search)
+        if (window.location.hash === "#settings") {
+          const url = new URL(window.location.href);
+          url.hash = "";
+          window.history.replaceState(null, "", url.pathname + url.search);
         }
       }
     } catch {}
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        {children}
-      </DialogTrigger>
+      <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Edit Profile</DialogTitle>
@@ -123,7 +130,9 @@ export function ProfileEditModal({ user, children }: ProfileEditModalProps) {
             <Input
               id="name"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
               required
             />
           </div>
@@ -133,7 +142,9 @@ export function ProfileEditModal({ user, children }: ProfileEditModalProps) {
             <Input
               id="headline"
               value={formData.headline}
-              onChange={(e) => setFormData({ ...formData, headline: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, headline: e.target.value })
+              }
               placeholder="e.g., Software Engineer at Tech Corp"
             />
           </div>
@@ -143,7 +154,9 @@ export function ProfileEditModal({ user, children }: ProfileEditModalProps) {
             <Input
               id="location"
               value={formData.location}
-              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, location: e.target.value })
+              }
               placeholder="e.g., New York, NY"
             />
           </div>
@@ -153,7 +166,9 @@ export function ProfileEditModal({ user, children }: ProfileEditModalProps) {
             <Input
               id="website"
               value={formData.website}
-              onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, website: e.target.value })
+              }
               placeholder="e.g., https://yourwebsite.com"
             />
           </div>
@@ -163,7 +178,9 @@ export function ProfileEditModal({ user, children }: ProfileEditModalProps) {
             <Textarea
               id="bio"
               value={formData.bio}
-              onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, bio: e.target.value })
+              }
               placeholder="Tell others about yourself..."
               rows={4}
             />
@@ -186,5 +203,5 @@ export function ProfileEditModal({ user, children }: ProfileEditModalProps) {
         </form>
       </DialogContent>
     </Dialog>
-  )
-} 
+  );
+}

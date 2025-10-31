@@ -1,8 +1,8 @@
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Separator } from "@/components/ui/separator"
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
 import {
   MapPin,
   Clock,
@@ -11,40 +11,43 @@ import {
   Share2,
   Building,
   Calendar,
-  Users,
   ArrowLeft,
   ExternalLink,
-} from "lucide-react"
-import Link from "next/link"
-import Header from "../../components/Header"
-import { getCurrentUser } from "@/lib/getCurrentUser"
-import { User } from "@/../types/prisma"
-import prisma from "@/lib/prisma"
-import { notFound } from "next/navigation"
-import JobApplicationForm from "./components/JobApplicationForm"
-import { getAvatarUrl, getCompanyLogoUrl } from "@/lib/image-utils"
+} from "lucide-react";
+import Link from "next/link";
+import Header from "../../components/Header";
+import { getCurrentUser } from "@/lib/getCurrentUser";
+import { User } from "@/../types/prisma";
+import prisma from "@/lib/prisma";
+import { notFound } from "next/navigation";
+import JobApplicationForm from "./components/JobApplicationForm";
+import { getCompanyLogoUrl } from "@/lib/image-utils";
 
-export default async function JobPage({ 
-  params 
-}: { 
-  params: Promise<{ lang: 'en' | 'am', id: string }> 
+export default async function JobPage({
+  params,
+}: {
+  params: Promise<{ lang: "en" | "am"; id: string }>;
 }) {
-  const { lang, id } = await params
-  const user = await getCurrentUser() as unknown as User
+  const { lang, id } = await params;
+  const user = (await getCurrentUser()) as unknown as User;
 
   // Handle case where user is not found
   if (!user) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">User not found</h1>
-          <p className="text-gray-600 mb-4">Please log in with a valid account.</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">
+            User not found
+          </h1>
+          <p className="text-gray-600 mb-4">
+            Please log in with a valid account.
+          </p>
           <Link href={`/${lang}/auth/login`}>
             <Button>Go to Login</Button>
           </Link>
         </div>
       </div>
-    )
+    );
   }
 
   // Fetch job listing with all related data
@@ -60,7 +63,7 @@ export default async function JobPage({
           location: true,
           website: true,
           createdAt: true,
-        }
+        },
       },
       applications: {
         select: {
@@ -69,36 +72,36 @@ export default async function JobPage({
             select: {
               id: true,
               name: true,
-            }
-          }
-        }
+            },
+          },
+        },
       },
       bookmarks: {
         where: {
-          userId: user.id
-        }
-      }
-    }
-  })
+          userId: user.id,
+        },
+      },
+    },
+  });
 
   if (!job) {
-    notFound()
+    notFound();
   }
 
   // Check if user has already applied
-  const hasApplied = job.applications.some(app => app.user.id === user.id)
-  const isBookmarked = job.bookmarks.length > 0
+  const hasApplied = job.applications.some((app) => app.user.id === user.id);
+  const isBookmarked = job.bookmarks.length > 0;
 
   // Get company stats
   const companyStats = await prisma.jobListing.aggregate({
     where: {
       employerId: job.employerId,
-      status: 'OPEN'
+      status: "OPEN",
     },
     _count: {
-      id: true
-    }
-  })
+      id: true,
+    },
+  });
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -124,17 +127,24 @@ export default async function JobPage({
                 <div className="flex items-start space-x-4">
                   <Link href={`/${lang}/company/${job.employer.id}`}>
                     <Avatar className="h-16 w-16">
-                    <AvatarImage src={getCompanyLogoUrl(job.employer.image, job.employer.name)} />
-                    <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-500 text-white text-lg">
-                      {job.employer.name.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
+                      <AvatarImage
+                        src={getCompanyLogoUrl(
+                          job.employer.image,
+                          job.employer.name,
+                        )}
+                      />
+                      <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-500 text-white text-lg">
+                        {job.employer.name.charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
                   </Link>
-                  
+
                   <div className="flex-1">
                     <div className="flex items-start justify-between">
                       <div>
-                        <h1 className="text-2xl font-bold text-gray-900 mb-2">{job.title}</h1>
+                        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                          {job.title}
+                        </h1>
                         <Link href={`/${lang}/company/${job.employer.id}`}>
                           <p className="text-blue-600 font-medium text-lg hover:underline cursor-pointer">
                             {job.employer.name}
@@ -142,19 +152,23 @@ export default async function JobPage({
                         </Link>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Button variant="ghost" size="sm" className="text-gray-500 hover:text-blue-600">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-gray-500 hover:text-blue-600"
+                        >
                           <Share2 className="h-4 w-4" />
                         </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className={`${isBookmarked ? 'text-blue-600' : 'text-gray-500'} hover:text-blue-600`}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={`${isBookmarked ? "text-blue-600" : "text-gray-500"} hover:text-blue-600`}
                         >
                           <Bookmark className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center space-x-6 mt-4 text-sm text-gray-500">
                       <div className="flex items-center space-x-1">
                         <MapPin className="h-4 w-4" />
@@ -162,7 +176,7 @@ export default async function JobPage({
                       </div>
                       <div className="flex items-center space-x-1">
                         <Clock className="h-4 w-4" />
-                        <span>{job.jobType.replace('_', ' ')}</span>
+                        <span>{job.jobType.replace("_", " ")}</span>
                       </div>
                       {job.salary && (
                         <div className="flex items-center space-x-1">
@@ -172,7 +186,9 @@ export default async function JobPage({
                       )}
                       <div className="flex items-center space-x-1">
                         <Calendar className="h-4 w-4" />
-                        <span>Posted {new Date(job.createdAt).toLocaleDateString()}</span>
+                        <span>
+                          Posted {new Date(job.createdAt).toLocaleDateString()}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -187,7 +203,9 @@ export default async function JobPage({
               </CardHeader>
               <CardContent>
                 <div className="prose max-w-none">
-                  <p className="text-gray-700 whitespace-pre-wrap">{job.description}</p>
+                  <p className="text-gray-700 whitespace-pre-wrap">
+                    {job.description}
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -230,7 +248,8 @@ export default async function JobPage({
                       ✓ Application Submitted
                     </div>
                     <p className="text-gray-600">
-                      Your application has been successfully submitted for this position.
+                      Your application has been successfully submitted for this
+                      position.
                     </p>
                   </div>
                 </CardContent>
@@ -251,15 +270,24 @@ export default async function JobPage({
               <CardContent className="space-y-4">
                 <div className="flex items-center space-x-3">
                   <Avatar className="h-12 w-12">
-                    <AvatarImage src={getCompanyLogoUrl(job.employer.image, job.employer.name)} />
+                    <AvatarImage
+                      src={getCompanyLogoUrl(
+                        job.employer.image,
+                        job.employer.name,
+                      )}
+                    />
                     <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-500 text-white">
                       {job.employer.name.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <h3 className="font-semibold text-gray-900">{job.employer.name}</h3>
+                    <h3 className="font-semibold text-gray-900">
+                      {job.employer.name}
+                    </h3>
                     {job.employer.headline && (
-                      <p className="text-sm text-gray-600">{job.employer.headline}</p>
+                      <p className="text-sm text-gray-600">
+                        {job.employer.headline}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -274,9 +302,9 @@ export default async function JobPage({
                 {job.employer.website && (
                   <div className="flex items-center space-x-2 text-sm">
                     <ExternalLink className="h-4 w-4 text-gray-600" />
-                    <a 
-                      href={job.employer.website} 
-                      target="_blank" 
+                    <a
+                      href={job.employer.website}
+                      target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-600 hover:underline"
                     >
@@ -290,7 +318,9 @@ export default async function JobPage({
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Active Jobs</span>
-                    <span className="font-medium">{companyStats._count.id}</span>
+                    <span className="font-medium">
+                      {companyStats._count.id}
+                    </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Member Since</span>
@@ -314,7 +344,9 @@ export default async function JobPage({
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Job Type</span>
-                  <span className="font-medium">{job.jobType.replace('_', ' ')}</span>
+                  <span className="font-medium">
+                    {job.jobType.replace("_", " ")}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Location</span>
@@ -336,7 +368,8 @@ export default async function JobPage({
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-gray-600">
-                  More jobs from {job.employer.name} and similar companies will appear here.
+                  More jobs from {job.employer.name} and similar companies will
+                  appear here.
                 </p>
               </CardContent>
             </Card>
@@ -344,5 +377,5 @@ export default async function JobPage({
         </div>
       </div>
     </div>
-  )
-} 
+  );
+}

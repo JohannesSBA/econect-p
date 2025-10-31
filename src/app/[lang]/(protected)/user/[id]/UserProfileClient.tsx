@@ -19,17 +19,22 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { chatHrefConstructor } from "@/lib/utils"
-import ConnectionButton from "@/components/ConnectionButton"
+import ConnectionButton, { type ConnectionStatus } from "@/components/ConnectionButton"
 import { useRouter } from "next/navigation"
 import { getAvatarUrl } from "@/lib/image-utils"
+
+interface ConnectionSummary {
+  id: string
+  senderId: string
+  receiverId: string
+  status: ConnectionStatus
+}
 
 interface UserProfileClientProps {
   lang: string
   currentUser: any
   user: any
-  connection: any
-  isConnected: boolean
-  hasPendingRequest: boolean
+  connection?: ConnectionSummary | null
   isRequestSentByMe: boolean
   peopleAlsoViewed?: Array<{ id: string; name: string; image?: string | null; headline?: string | null; location?: string | null }>
   similarProfiles?: Array<{ id: string; name: string; image?: string | null; headline?: string | null; location?: string | null }>
@@ -41,19 +46,16 @@ export default function UserProfileClient({
   currentUser,
   user,
   connection,
-  isConnected,
-  hasPendingRequest,
-  isRequestSentByMe
-  ,
+  isRequestSentByMe,
   peopleAlsoViewed = [],
   similarProfiles = [],
   connectionCount
 }: UserProfileClientProps) {
   const router = useRouter()
-  const [connectionStatus, setConnectionStatus] = useState(connection?.status || "NONE")
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>(connection?.status ?? "NONE")
   const [isRequestSentByMeState, setIsRequestSentByMeState] = useState(isRequestSentByMe)
 
-  const handleStatusChange = (status: string, isRequestSentByMe: boolean) => {
+  const handleStatusChange = (status: ConnectionStatus, isRequestSentByMe: boolean) => {
     setConnectionStatus(status)
     setIsRequestSentByMeState(isRequestSentByMe)
     
@@ -115,7 +117,7 @@ export default function UserProfileClient({
                             ) : (
                               <ConnectionButton 
                                 userId={user.id} 
-                                connectionStatus={connectionStatus as any}
+                                connectionStatus={connectionStatus}
                                 isRequestSentByMe={isRequestSentByMeState}
                                 onStatusChange={handleStatusChange}
                               />

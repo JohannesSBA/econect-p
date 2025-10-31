@@ -29,7 +29,9 @@ const eslintConfig = [
         "caughtErrorsIgnorePattern": "^_"
       }],
       "@typescript-eslint/no-this-alias": "error",
-      "@typescript-eslint/no-require-imports": "error"
+      "@typescript-eslint/no-require-imports": "error",
+      "@typescript-eslint/no-explicit-any": "off",
+      "@next/next/no-img-element": "off"
     }
   }
 ];

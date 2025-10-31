@@ -1,126 +1,131 @@
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Separator } from "@/components/ui/separator"
-import {
-  Search,
-  Bell,
-  Users,
-  MessageSquare,
-  Heart,
-  Building,
-  MoreHorizontal,
-  Check,
-  X,
-  Eye,
-  Filter,
-  Settings,
-} from "lucide-react"
-import Link from "next/link"
-import Header from "../components/Header"
-import { getCurrentUser } from "@/lib/getCurrentUser"
-import { User } from "@/../types/prisma"
-import prisma from "@/lib/prisma"
-import NotificationsClient from "./NotificationsClient"
+import Link from "next/link";
+import { Bell, Eye, MessageSquare, Users } from "lucide-react";
+import type { Prisma } from "@prisma/client";
 
-export default async function NotificationsPage({ params }: { params: Promise<{ lang: 'en' | 'am' }> }) {
-  const { lang } = await params
-  const user = await getCurrentUser() as unknown as User
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Header from "../components/Header";
+import { getCurrentUser } from "@/lib/getCurrentUser";
+import prisma from "@/lib/prisma";
+import NotificationsClient from "./NotificationsClient";
+import { Notification, User } from "@/../types/types";
+
+type Locale = "en" | "am";
+
+type SidebarFilter = "all" | "unread" | "connections" | "mentions";
+
+interface NotificationsPageProps {
+  params: { lang: Locale };
+  searchParams?: Record<string, string | string[] | undefined>;
+}
+
+export type NotificationPayload = Record<string, unknown> & {
+  jobId?: string;
+  postId?: string;
+  senderId?: string;
+};
+
+export type SerializableNotification = Pick<
+  Notification,
+  "id" | "type" | "title" | "message" | "read"
+> & {
+  createdAt: string;
+  data: NotificationPayload | null;
+};
+
+const parseNotificationData = (
+  value: Prisma.Payload<Notification> | null,
+): NotificationPayload | null => {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  return value as NotificationPayload;
+};
+
+const serializeNotifications = (
+  items: Notification[],
+): SerializableNotification[] =>
+  items.map((notification) => ({
+    id: notification.id,
+    type: notification.type,
+    title: notification.title,
+    message: notification.message,
+    read: notification.read,
+    createdAt: notification.createdAt.toISOString(),
+    data: parseNotificationData(notification.data),
+  }));
+
+const parseSidebarFilter = (value: unknown): SidebarFilter => {
+  if (typeof value !== "string") {
+    return "all";
+  }
+  switch (value.toLowerCase()) {
+    case "unread":
+      return "unread";
+    case "connections":
+      return "connections";
+    case "mentions":
+      return "mentions";
+    default:
+      return "all";
+  }
+};
+
+const linkBaseClass = "flex items-center space-x-2 p-2 rounded-lg";
+const linkActiveClass = "bg-blue-50 text-blue-700";
+const linkInactiveClass = "hover:bg-gray-50 text-gray-700";
+
+export default async function NotificationsPage({
+  params,
+  searchParams,
+}: NotificationsPageProps) {
+  const { lang } = params;
+  const activeFilter = parseSidebarFilter(searchParams?.type);
+  const user = await getCurrentUser();
 
   // Handle case where user is not found
   if (!user) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">User not found</h1>
-          <p className="text-gray-600 mb-4">Please log in with a valid account.</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">
+            User not found
+          </h1>
+          <p className="text-gray-600 mb-4">
+            Please log in with a valid account.
+          </p>
           <Link href={`/${lang}/auth/login`}>
             <Button>Go to Login</Button>
           </Link>
         </div>
       </div>
-    )
+    );
   }
 
   // Fetch user's notifications
   const notifications = await prisma.notification.findMany({
     where: {
-      userId: user.id
+      userId: user.id,
     },
     orderBy: {
-      createdAt: 'desc'
+      createdAt: "desc",
     },
-    take: 20
-  })
+    take: 20,
+  });
 
-  const unreadCount = notifications.filter(n => !n.read).length
+  const serializedNotifications = serializeNotifications(
+    notifications as Notification[],
+  );
 
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case "CONNECTION_REQUEST":
-        return <Users className="h-4 w-4 text-blue-600" />
-      case "LIKE":
-        return <Heart className="h-4 w-4 text-red-600" />
-      case "COMMENT":
-        return <MessageSquare className="h-4 w-4 text-green-600" />
-      case "JOB_INVITATION":
-        return <Building className="h-4 w-4 text-purple-600" />
-      case "APPLICATION_UPDATE":
-        return <Building className="h-4 w-4 text-purple-600" />
-      case "MESSAGE":
-        return <MessageSquare className="h-4 w-4 text-blue-600" />
-      default:
-        return <Bell className="h-4 w-4 text-gray-600" />
-    }
-  }
-
-  const getActionButtons = (type: string) => {
-    switch (type) {
-      case "CONNECTION_REQUEST":
-        return (
-          <div className="flex items-center space-x-2">
-            <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-              <Check className="h-4 w-4 mr-1" />
-              Accept
-            </Button>
-            <Button size="sm" variant="outline">
-              <X className="h-4 w-4 mr-1" />
-              Decline
-            </Button>
-          </div>
-        )
-      case "LIKE":
-      case "COMMENT":
-        return (
-          <Button size="sm" variant="outline">
-            <Eye className="h-4 w-4 mr-1" />
-            View
-          </Button>
-        )
-      case "JOB_INVITATION":
-      case "APPLICATION_UPDATE":
-        return (
-          <Button size="sm" className="bg-green-600 hover:bg-green-700">
-            View
-          </Button>
-        )
-      case "MESSAGE":
-        return (
-          <Button size="sm" variant="outline">
-            <MessageSquare className="h-4 w-4 mr-1" />
-            Reply
-          </Button>
-        )
-      default:
-        return null
-    }
-  }
+  const unreadCount = serializedNotifications.reduce(
+    (count, notification) => (notification.read ? count : count + 1),
+    0,
+  );
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header lang={lang} user={user} />
+      <Header lang={lang} user={user as unknown as User} />
 
       <div className="container mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -128,34 +133,73 @@ export default async function NotificationsPage({ params }: { params: Promise<{ 
           <div className="lg:col-span-1">
             <Card className="bg-white shadow-sm sticky top-20">
               <CardHeader>
-                <CardTitle className="text-lg font-semibold">Notifications</CardTitle>
+                <CardTitle className="text-lg font-semibold">
+                  Notifications
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Link href={`/${lang}/notifications`} className="flex items-center space-x-2 p-2 rounded-lg bg-blue-50 text-blue-700">
+                  <Link
+                    href={`/${lang}/notifications`}
+                    className={`${linkBaseClass} ${
+                      activeFilter === "all"
+                        ? linkActiveClass
+                        : linkInactiveClass
+                    }`}
+                  >
                     <Bell className="h-4 w-4" />
-                    <span className="text-sm font-medium">All Notifications</span>
-                    <Badge id="notif-unread-badge" variant="secondary" className="ml-auto bg-blue-100 text-blue-700">
+                    <span className="text-sm font-medium">
+                      All Notifications
+                    </span>
+                    <Badge
+                      data-notification-badge
+                      variant="secondary"
+                      className="ml-auto bg-blue-100 text-blue-700"
+                    >
                       {unreadCount}
                     </Badge>
                   </Link>
-                  <Link href={`/${lang}/notifications?type=unread`} className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-50 text-gray-700">
+                  <Link
+                    href={`/${lang}/notifications?type=unread`}
+                    className={`${linkBaseClass} ${
+                      activeFilter === "unread"
+                        ? linkActiveClass
+                        : linkInactiveClass
+                    }`}
+                  >
                     <Eye className="h-4 w-4" />
                     <span className="text-sm">Unread</span>
-                    <Badge id="notif-unread-badge" variant="secondary" className="ml-auto bg-red-100 text-red-700">
+                    <Badge
+                      data-notification-badge
+                      variant="secondary"
+                      className="ml-auto bg-red-100 text-red-700"
+                    >
                       {unreadCount}
                     </Badge>
                   </Link>
-                  <Link href={`/${lang}/notifications?type=connections`} className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-50 text-gray-700">
+                  <Link
+                    href={`/${lang}/notifications?type=connections`}
+                    className={`${linkBaseClass} ${
+                      activeFilter === "connections"
+                        ? linkActiveClass
+                        : linkInactiveClass
+                    }`}
+                  >
                     <Users className="h-4 w-4" />
                     <span className="text-sm">Connection Requests</span>
                   </Link>
-                  <Link href={`/${lang}/notifications?type=mentions`} className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-50 text-gray-700">
+                  <Link
+                    href={`/${lang}/notifications?type=mentions`}
+                    className={`${linkBaseClass} ${
+                      activeFilter === "mentions"
+                        ? linkActiveClass
+                        : linkInactiveClass
+                    }`}
+                  >
                     <MessageSquare className="h-4 w-4" />
                     <span className="text-sm">Mentions</span>
                   </Link>
                 </div>
-
               </CardContent>
             </Card>
           </div>
@@ -164,9 +208,10 @@ export default async function NotificationsPage({ params }: { params: Promise<{ 
           <div className="lg:col-span-3 space-y-6">
             {/* Search and Actions */}
             {/* Interactive client controls + list */}
-            <NotificationsClient lang={lang} initial={notifications as any} />
-
-            
+            <NotificationsClient
+              lang={lang}
+              initial={serializedNotifications}
+            />
 
             {/* Load More */}
             <div className="text-center">
@@ -178,5 +223,5 @@ export default async function NotificationsPage({ params }: { params: Promise<{ 
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -19,7 +19,7 @@ export function getImageUrl(imageUrl?: string | null, fallback?: string): string
   return fallback || "/placeholder.svg"
 }
 
-export function getAvatarUrl(userImage?: string | null, userName?: string): string {
+export function getAvatarUrl(userImage?: string | null, _userName?: string): string {
   if (!userImage) {
     return "/placeholder.svg"
   }
@@ -27,7 +27,7 @@ export function getAvatarUrl(userImage?: string | null, userName?: string): stri
   return getImageUrl(userImage, "/placeholder.svg")
 }
 
-export function getCompanyLogoUrl(companyImage?: string | null, companyName?: string): string {
+export function getCompanyLogoUrl(companyImage?: string | null, _companyName?: string): string {
   if (!companyImage) {
     return "/placeholder.svg"
   }

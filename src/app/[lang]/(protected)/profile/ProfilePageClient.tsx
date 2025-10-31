@@ -1,66 +1,89 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Edit,
   MapPin,
   Globe,
   Users,
-  MoreHorizontal,
   Mail,
   Phone,
   Settings,
   Briefcase,
   GraduationCap,
-} from "lucide-react"
-import Header from "../components/Header"
-import Link from "next/link"
-import { ProfileEditModal } from "../components/ProfileEditModal"
-import ProfileImageUpload from "@/components/ProfileImageUpload"
-import { getAvatarUrl } from "@/lib/image-utils"
-import { useRouter } from "next/navigation"
-import { EditContentModal } from "../components/EditContentModal"
+} from "lucide-react";
+import Header from "../components/Header";
+import Link from "next/link";
+import { ProfileEditModal } from "../components/ProfileEditModal";
+import ProfileImageUpload from "@/components/ProfileImageUpload";
+import { getAvatarUrl } from "@/lib/image-utils";
+import { useRouter } from "next/navigation";
+import { EditContentModal } from "../components/EditContentModal";
 
 interface ProfilePageClientProps {
-  lang: 'en' | 'am'
-  userWithProfile: any
-  posts?: any[]
-  peopleAlsoViewed?: Array<{ id: string; name: string; image?: string | null; headline?: string | null; location?: string | null }>
-  similarProfiles?: Array<{ id: string; name: string; image?: string | null; headline?: string | null; location?: string | null }>
-  connectionCount?: number
-  savedPosts?: Array<any>
-  savedJobs?: Array<any>
+  lang: "en" | "am";
+  userWithProfile: any;
+  posts?: any[];
+  peopleAlsoViewed?: Array<{
+    id: string;
+    name: string;
+    image?: string | null;
+    headline?: string | null;
+    location?: string | null;
+  }>;
+  similarProfiles?: Array<{
+    id: string;
+    name: string;
+    image?: string | null;
+    headline?: string | null;
+    location?: string | null;
+  }>;
+  connectionCount?: number;
+  savedPosts?: Array<any>;
+  savedJobs?: Array<any>;
 }
 
-export default function ProfilePageClient({ lang, userWithProfile, posts = [], peopleAlsoViewed = [], similarProfiles = [], connectionCount, savedPosts = [], savedJobs = [] }: ProfilePageClientProps) {
-  const [currentUser, setCurrentUser] = useState(userWithProfile)
-  const router = useRouter()
+export default function ProfilePageClient({
+  lang,
+  userWithProfile,
+  posts = [],
+  peopleAlsoViewed = [],
+  similarProfiles = [],
+  connectionCount,
+  savedPosts = [],
+  savedJobs = [],
+}: ProfilePageClientProps) {
+  const [currentUser, setCurrentUser] = useState(userWithProfile);
+  const router = useRouter();
 
   const handleImageUpload = (imageUrl: string) => {
     // Update the local state
     setCurrentUser((prev: any) => ({
       ...prev,
-      image: imageUrl
-    }))
-    
+      image: imageUrl,
+    }));
+
     // Refresh the page to get updated data from server
-    router.refresh()
-  }
+    router.refresh();
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header lang={lang} user={{
-        id: currentUser.id,
-        name: currentUser.name,
-        email: currentUser.email,
-        image: currentUser.image || undefined,
-        headline: currentUser.headline || undefined,
-        role: currentUser.role
-      }} />
+      <Header
+        lang={lang}
+        user={{
+          id: currentUser.id,
+          name: currentUser.name,
+          email: currentUser.email,
+          image: currentUser.image || undefined,
+          headline: currentUser.headline || undefined,
+          role: currentUser.role,
+        }}
+      />
 
       <div className="container mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -71,16 +94,26 @@ export default function ProfilePageClient({ lang, userWithProfile, posts = [], p
               <CardContent className="p-6">
                 <div className="flex items-start space-x-6">
                   <Avatar className="h-20 w-20 md:h-24 md:w-24">
-                    <AvatarImage src={getAvatarUrl(currentUser.image, currentUser.name)} />
+                    <AvatarImage
+                      src={getAvatarUrl(currentUser.image, currentUser.name)}
+                    />
                     <AvatarFallback className="text-2xl bg-gradient-to-r from-blue-500 to-purple-500 text-white">
-                      {currentUser.name?.split(" ").map((n: string) => n[0]).join("").toUpperCase()}
+                      {currentUser.name
+                        ?.split(" ")
+                        .map((n: string) => n[0])
+                        .join("")
+                        .toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
                     <div className="flex items-start justify-between">
                       <div>
-                        <h1 className="text-2xl font-bold text-gray-900 mb-1">{currentUser.name}</h1>
-                        <p className="text-lg text-gray-600 mb-2">{currentUser.headline || "Professional"}</p>
+                        <h1 className="text-2xl font-bold text-gray-900 mb-1">
+                          {currentUser.name}
+                        </h1>
+                        <p className="text-lg text-gray-600 mb-2">
+                          {currentUser.headline || "Professional"}
+                        </p>
                         <div className="flex items-center space-x-4 text-sm text-gray-500 mb-3">
                           {currentUser.location && (
                             <div className="flex items-center space-x-1">
@@ -88,14 +121,25 @@ export default function ProfilePageClient({ lang, userWithProfile, posts = [], p
                               <span>{currentUser.location}</span>
                             </div>
                           )}
-                          <Link href={`/${lang}/connects`} className="flex items-center space-x-1">
+                          <Link
+                            href={`/${lang}/connects`}
+                            className="flex items-center space-x-1"
+                          >
                             <Users className="h-4 w-4" />
-                            <span>{typeof connectionCount === 'number' ? `${connectionCount} connection${connectionCount === 1 ? '' : 's'}` : 'Connections'}</span>
+                            <span>
+                              {typeof connectionCount === "number"
+                                ? `${connectionCount} connection${connectionCount === 1 ? "" : "s"}`
+                                : "Connections"}
+                            </span>
                           </Link>
                         </div>
                         <div className="flex items-center space-x-2">
                           <ProfileEditModal user={currentUser}>
-                            <Button size="sm" variant="outline" className="bg-dots-link">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="bg-dots-link"
+                            >
                               <Settings className="h-4 w-4 mr-1" />
                               Edit Profile
                             </Button>
@@ -117,165 +161,227 @@ export default function ProfilePageClient({ lang, userWithProfile, posts = [], p
             <ProfileImageUpload
               currentImage={currentUser.image || undefined}
               onImageUpload={handleImageUpload}
-              userId={currentUser.id}
               userName={currentUser.name}
             />
 
             {/* Posts Section */}
-            {posts.length > 0 && (<Card className="bg-white shadow-sm">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg font-semibold">Posts</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {posts && posts.length > 0 ? (
-                  <div className="space-y-4">
-                    {posts.map((post: any) => (
-                      <div key={post.id} className="border rounded-md p-4">
-                        <div className="flex items-center space-x-3 mb-2">
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={getAvatarUrl(currentUser.image, currentUser.name)} />
-                            <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs">
-                              {currentUser.name?.split(" ").map((n: string) => n[0]).join("").toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1">
-                            <p className="font-medium text-sm">{currentUser.name}</p>
-                            <p className="text-xs text-gray-500">{new Date(post.createdAt).toLocaleString()}</p>
-                          </div>
-                        </div>
-                        {post.title && (
-                          <h4 className="font-semibold text-gray-900 mb-1">{post.title}</h4>
-                        )}
-                        <p className="text-gray-800 whitespace-pre-wrap">{post.content}</p>
-                        {/* Images */}
-                        {(() => {
-                          const imgs: string[] = (Array.isArray(post.images) && post.images.length > 0)
-                            ? post.images
-                            : (post.imageUrl ? [post.imageUrl] : [])
-                          if (!imgs || imgs.length === 0) return null
-                          if (imgs.length === 1) {
-                            return (
-                              <div className="mt-3">
-                                <img
-                                  src={imgs[0]}
-                                  alt="Post image"
-                                  className="w-1/4 max-h-1/10 object-cover rounded-lg border"
-                                  loading="lazy"
-                                />
-                              </div>
-                            )
-                          }
-                          const gridCols = imgs.length === 2 ? "grid-cols-2" : "grid-cols-3"
-                          return (
-                            <div className={`mt-3 grid ${gridCols} gap-2`}>
-                              {imgs.map((url, idx) => (
-                                <img
-                                  key={url}
-                                  src={url}
-                                  alt={`Post image ${idx + 1}`}
-                                  className="w-full h-10 md:h-20 object-cover rounded-lg border"
-                                  loading="lazy"
-                                />
-                              ))}
+            {posts.length > 0 && (
+              <Card className="bg-white shadow-sm">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg font-semibold">Posts</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {posts && posts.length > 0 ? (
+                    <div className="space-y-4">
+                      {posts.map((post: any) => (
+                        <div key={post.id} className="border rounded-md p-4">
+                          <div className="flex items-center space-x-3 mb-2">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage
+                                src={getAvatarUrl(
+                                  currentUser.image,
+                                  currentUser.name,
+                                )}
+                              />
+                              <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs">
+                                {currentUser.name
+                                  ?.split(" ")
+                                  .map((n: string) => n[0])
+                                  .join("")
+                                  .toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1">
+                              <p className="font-medium text-sm">
+                                {currentUser.name}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {new Date(post.createdAt).toLocaleString()}
+                              </p>
                             </div>
-                          )
-                        })()}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-gray-500 text-center">No posts yet.</p>
-                )}
-              </CardContent>
-            </Card>)}
+                          </div>
+                          {post.title && (
+                            <h4 className="font-semibold text-gray-900 mb-1">
+                              {post.title}
+                            </h4>
+                          )}
+                          <p className="text-gray-800 whitespace-pre-wrap">
+                            {post.content}
+                          </p>
+                          {/* Images */}
+                          {(() => {
+                            const imgs: string[] =
+                              Array.isArray(post.images) &&
+                              post.images.length > 0
+                                ? post.images
+                                : post.imageUrl
+                                  ? [post.imageUrl]
+                                  : [];
+                            if (!imgs || imgs.length === 0) return null;
+                            if (imgs.length === 1) {
+                              return (
+                                <div className="mt-3">
+                                  <img
+                                    src={imgs[0]}
+                                    alt="Post image"
+                                    className="w-1/4 max-h-1/10 object-cover rounded-lg border"
+                                    loading="lazy"
+                                  />
+                                </div>
+                              );
+                            }
+                            const gridCols =
+                              imgs.length === 2 ? "grid-cols-2" : "grid-cols-3";
+                            return (
+                              <div className={`mt-3 grid ${gridCols} gap-2`}>
+                                {imgs.map((url, idx) => (
+                                  <img
+                                    key={url}
+                                    src={url}
+                                    alt={`Post image ${idx + 1}`}
+                                    className="w-full h-10 md:h-20 object-cover rounded-lg border"
+                                    loading="lazy"
+                                  />
+                                ))}
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 text-center">No posts yet.</p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Saved Posts */}
-            {savedPosts.length > 0 && (<Card className="bg-white shadow-sm">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg font-semibold">Saved Posts</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {savedPosts.length > 0 ? (
-                  <div className="space-y-4">
-                    {savedPosts.map((bp: any) => (
-                      <div key={bp.id} className="border border-gray-200 rounded-lg p-4">
-                        <div className="flex items-center space-x-3 mb-2">
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={getAvatarUrl(bp.post.author.image, bp.post.author.name)} />
-                            <AvatarFallback>{bp.post.author.name?.charAt(0)?.toUpperCase() || 'U'}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="font-medium text-gray-900">{bp.post.author.name}</div>
-                            <div className="text-xs text-gray-500">{new Date(bp.post.createdAt).toLocaleString()}</div>
-                          </div>
-                        </div>
-                        <div className="text-gray-800 whitespace-pre-wrap">{bp.post.content}</div>
-                        {(() => {
-                          const imgs: string[] = (Array.isArray(bp.images) && bp.images.length > 0)
-                            ? bp.images
-                            : (bp.imageUrl ? [bp.imageUrl] : [])
-                          if (!imgs || imgs.length === 0) return null
-                          if (imgs.length === 1) {
-                            return (
-                              <div className="mt-3">
-                                <img
-                                  src={imgs[0]}
-                                  alt="Saved post image"
-                                  className="w-1/4 max-h-1/10 object-cover rounded-lg border"
-                                  loading="lazy"
-                                />
+            {savedPosts.length > 0 && (
+              <Card className="bg-white shadow-sm">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg font-semibold">
+                    Saved Posts
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {savedPosts.length > 0 ? (
+                    <div className="space-y-4">
+                      {savedPosts.map((bp: any) => (
+                        <div
+                          key={bp.id}
+                          className="border border-gray-200 rounded-lg p-4"
+                        >
+                          <div className="flex items-center space-x-3 mb-2">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage
+                                src={getAvatarUrl(
+                                  bp.post.author.image,
+                                  bp.post.author.name,
+                                )}
+                              />
+                              <AvatarFallback>
+                                {bp.post.author.name
+                                  ?.charAt(0)
+                                  ?.toUpperCase() || "U"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="font-medium text-gray-900">
+                                {bp.post.author.name}
                               </div>
-                            )
-                          }
-                          const gridCols = imgs.length === 2 ? "grid-cols-2" : "grid-cols-3"
-                          return (
-                            <div className={`mt-3 grid ${gridCols} gap-2`}>
-                              {imgs.map((url, idx) => (
-                                <img
-                                  key={url}
-                                  src={url}
-                                  alt={`Saved post image ${idx + 1}`}
-                                  className="w-full h-10 md:h-20 object-cover rounded-lg border"
-                                  loading="lazy"
-                                />
-                              ))}
+                              <div className="text-xs text-gray-500">
+                                {new Date(bp.post.createdAt).toLocaleString()}
+                              </div>
                             </div>
-                          )
-                        })()}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-gray-500 text-center">No saved posts.</p>
-                )}
-              </CardContent>
-            </Card>)}
+                          </div>
+                          <div className="text-gray-800 whitespace-pre-wrap">
+                            {bp.post.content}
+                          </div>
+                          {(() => {
+                            const imgs: string[] =
+                              Array.isArray(bp.images) && bp.images.length > 0
+                                ? bp.images
+                                : bp.imageUrl
+                                  ? [bp.imageUrl]
+                                  : [];
+                            if (!imgs || imgs.length === 0) return null;
+                            if (imgs.length === 1) {
+                              return (
+                                <div className="mt-3">
+                                  <img
+                                    src={imgs[0]}
+                                    alt="Saved post image"
+                                    className="w-1/4 max-h-1/10 object-cover rounded-lg border"
+                                    loading="lazy"
+                                  />
+                                </div>
+                              );
+                            }
+                            const gridCols =
+                              imgs.length === 2 ? "grid-cols-2" : "grid-cols-3";
+                            return (
+                              <div className={`mt-3 grid ${gridCols} gap-2`}>
+                                {imgs.map((url, idx) => (
+                                  <img
+                                    key={url}
+                                    src={url}
+                                    alt={`Saved post image ${idx + 1}`}
+                                    className="w-full h-10 md:h-20 object-cover rounded-lg border"
+                                    loading="lazy"
+                                  />
+                                ))}
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 text-center">No saved posts.</p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Saved Jobs */}
-            {savedJobs.length > 0 && (<Card className="bg-white shadow-sm">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg font-semibold">Saved Jobs</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {savedJobs.length > 0 ? (
-                  <div className="space-y-3">
-                    {savedJobs.map((bj: any) => (
-                      <div key={bj.id} className="border border-gray-200 rounded-lg p-4 flex items-center justify-between">
-                        <div>
-                          <div className="font-semibold text-gray-900">{bj.job.title}</div>
-                          <div className="text-sm text-gray-600">{bj.job.company} • {bj.job.location}</div>
+            {savedJobs.length > 0 && (
+              <Card className="bg-white shadow-sm">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg font-semibold">
+                    Saved Jobs
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {savedJobs.length > 0 ? (
+                    <div className="space-y-3">
+                      {savedJobs.map((bj: any) => (
+                        <div
+                          key={bj.id}
+                          className="border border-gray-200 rounded-lg p-4 flex items-center justify-between"
+                        >
+                          <div>
+                            <div className="font-semibold text-gray-900">
+                              {bj.job.title}
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              {bj.job.company} • {bj.job.location}
+                            </div>
+                          </div>
+                          <Link href={`/${lang}/jobs/${bj.job.id}`}>
+                            <Button size="sm" variant="outline">
+                              View
+                            </Button>
+                          </Link>
                         </div>
-                        <Link href={`/${lang}/jobs/${bj.job.id}`}>
-                          <Button size="sm" variant="outline">View</Button>
-                        </Link>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-gray-500 text-center">No saved jobs.</p>
-                )}
-              </CardContent>
-            </Card>)}
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 text-center">No saved jobs.</p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* About Section */}
             <Card className="bg-white shadow-sm">
@@ -289,7 +395,8 @@ export default function ProfilePageClient({ lang, userWithProfile, posts = [], p
               </CardHeader>
               <CardContent>
                 <p className="text-gray-700 leading-relaxed">
-                  {currentUser.profile?.bio || "Add a bio to tell others about yourself..."}
+                  {currentUser.profile?.bio ||
+                    "Add a bio to tell others about yourself..."}
                 </p>
               </CardContent>
             </Card>
@@ -300,20 +407,34 @@ export default function ProfilePageClient({ lang, userWithProfile, posts = [], p
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <Briefcase className="h-5 w-5 text-gray-600" />
-                    <CardTitle className="text-lg font-semibold">Experience</CardTitle>
+                    <CardTitle className="text-lg font-semibold">
+                      Experience
+                    </CardTitle>
                   </div>
-                  <EditContentModal type="experience" user={{...currentUser, skills: []}} />
+                  <EditContentModal
+                    type="experience"
+                    user={{ ...currentUser, skills: [] }}
+                  />
                 </div>
               </CardHeader>
               <CardContent>
-                {currentUser.profile?.experiences && currentUser.profile.experiences.length > 0 ? (
+                {currentUser.profile?.experiences &&
+                currentUser.profile.experiences.length > 0 ? (
                   <div className="space-y-4">
                     {currentUser.profile.experiences.map((experience: any) => (
-                      <div key={experience.id} className="border-l-4 border-blue-500 pl-4">
-                        <h4 className="font-semibold text-gray-900">{experience.jobTitle}</h4>
+                      <div
+                        key={experience.id}
+                        className="border-l-4 border-blue-500 pl-4"
+                      >
+                        <h4 className="font-semibold text-gray-900">
+                          {experience.jobTitle}
+                        </h4>
                         <p className="text-gray-600">
                           {experience.companyUserId ? (
-                            <Link href={`/${lang}/company/${experience.companyUserId}`} className="text-blue-600 hover:underline">
+                            <Link
+                              href={`/${lang}/company/${experience.companyUserId}`}
+                              className="text-blue-600 hover:underline"
+                            >
                               {experience.company}
                             </Link>
                           ) : (
@@ -321,17 +442,28 @@ export default function ProfilePageClient({ lang, userWithProfile, posts = [], p
                           )}
                         </p>
                         <p className="text-sm text-gray-500">
-                          {new Date(experience.startDate).toLocaleDateString()} - 
-                          {experience.current ? 'Present' : experience.endDate ? new Date(experience.endDate).toLocaleDateString() : ''}
+                          {new Date(experience.startDate).toLocaleDateString()}{" "}
+                          -
+                          {experience.current
+                            ? "Present"
+                            : experience.endDate
+                              ? new Date(
+                                  experience.endDate,
+                                ).toLocaleDateString()
+                              : ""}
                         </p>
                         {experience.description && (
-                          <p className="text-gray-700 mt-2">{experience.description}</p>
+                          <p className="text-gray-700 mt-2">
+                            {experience.description}
+                          </p>
                         )}
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-gray-500 text-center">No experience added yet.</p>
+                  <p className="text-gray-500 text-center">
+                    No experience added yet.
+                  </p>
                 )}
               </CardContent>
             </Card>
@@ -342,29 +474,46 @@ export default function ProfilePageClient({ lang, userWithProfile, posts = [], p
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <GraduationCap className="h-5 w-5 text-gray-600" />
-                    <CardTitle className="text-lg font-semibold">Education</CardTitle>
+                    <CardTitle className="text-lg font-semibold">
+                      Education
+                    </CardTitle>
                   </div>
-                  <EditContentModal type="education" user={{...currentUser, skills: []}} />
+                  <EditContentModal
+                    type="education"
+                    user={{ ...currentUser, skills: [] }}
+                  />
                 </div>
               </CardHeader>
               <CardContent>
-                {currentUser.profile?.education && currentUser.profile.education.length > 0 ? (
+                {currentUser.profile?.education &&
+                currentUser.profile.education.length > 0 ? (
                   <div className="space-y-4">
                     {currentUser.profile.education.map((education: any) => (
-                      <div key={education.id} className="border-l-4 border-green-500 pl-4">
-                        <h4 className="font-semibold text-gray-900">{education.school}</h4>
-                        <p className="text-gray-600">{education.fieldOfStudy} - {education.degreeType}</p>
+                      <div
+                        key={education.id}
+                        className="border-l-4 border-green-500 pl-4"
+                      >
+                        <h4 className="font-semibold text-gray-900">
+                          {education.school}
+                        </h4>
+                        <p className="text-gray-600">
+                          {education.fieldOfStudy} - {education.degreeType}
+                        </p>
                         <p className="text-sm text-gray-500">
                           {education.StartYear} - {education.EndYear}
                         </p>
                         {education.grade && (
-                          <p className="text-sm text-gray-500">Grade: {education.grade}</p>
+                          <p className="text-sm text-gray-500">
+                            Grade: {education.grade}
+                          </p>
                         )}
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-gray-500 text-center">No education entries yet.</p>
+                  <p className="text-gray-500 text-center">
+                    No education entries yet.
+                  </p>
                 )}
               </CardContent>
             </Card>
@@ -373,23 +522,39 @@ export default function ProfilePageClient({ lang, userWithProfile, posts = [], p
             <Card className="bg-white shadow-sm">
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg font-semibold">Skills</CardTitle>
-                  <EditContentModal type="skills" user={{...currentUser, skills: []}} />
+                  <CardTitle className="text-lg font-semibold">
+                    Skills
+                  </CardTitle>
+                  <EditContentModal
+                    type="skills"
+                    user={{ ...currentUser, skills: [] }}
+                  />
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div>
-                    <h4 className="font-medium text-gray-900 mb-2">Technical Skills</h4>
+                    <h4 className="font-medium text-gray-900 mb-2">
+                      Technical Skills
+                    </h4>
                     <div className="flex flex-wrap gap-2">
-                      {currentUser.profile?.skills && currentUser.profile.skills.length > 0 ? (
-                        currentUser.profile.skills.map((skillOnProfile: any) => (
-                          <Badge key={skillOnProfile.id} variant="secondary" className="bg-blue-100 text-blue-700">
-                            {skillOnProfile.skill.name}
-                          </Badge>
-                        ))
+                      {currentUser.profile?.skills &&
+                      currentUser.profile.skills.length > 0 ? (
+                        currentUser.profile.skills.map(
+                          (skillOnProfile: any) => (
+                            <Badge
+                              key={skillOnProfile.id}
+                              variant="secondary"
+                              className="bg-blue-100 text-blue-700"
+                            >
+                              {skillOnProfile.skill.name}
+                            </Badge>
+                          ),
+                        )
                       ) : (
-                        <p className="text-gray-500 text-sm">Add your skills to showcase your expertise</p>
+                        <p className="text-gray-500 text-sm">
+                          Add your skills to showcase your expertise
+                        </p>
                       )}
                     </div>
                   </div>
@@ -400,19 +565,26 @@ export default function ProfilePageClient({ lang, userWithProfile, posts = [], p
             {/* Activity Section */}
             <Card className="bg-white shadow-sm">
               <CardHeader className="pb-4">
-                <CardTitle className="text-lg font-semibold">Activity</CardTitle>
+                <CardTitle className="text-lg font-semibold">
+                  Activity
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex items-start space-x-3">
                     <Avatar className="h-8 w-8">
                       <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs">
-                        {currentUser.name?.split(" ").map((n: string) => n[0]).join("").toUpperCase()}
+                        {currentUser.name
+                          ?.split(" ")
+                          .map((n: string) => n[0])
+                          .join("")
+                          .toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
                       <p className="text-sm text-gray-700">
-                        <span className="font-medium">{currentUser.name}</span> shared a post about new React features
+                        <span className="font-medium">{currentUser.name}</span>{" "}
+                        shared a post about new React features
                       </p>
                       <p className="text-xs text-gray-500">2 days ago</p>
                     </div>
@@ -425,7 +597,8 @@ export default function ProfilePageClient({ lang, userWithProfile, posts = [], p
                     </Avatar>
                     <div className="flex-1">
                       <p className="text-sm text-gray-700">
-                        <span className="font-medium">Fordham University</span> congratulated you on your work anniversary
+                        <span className="font-medium">Fordham University</span>{" "}
+                        congratulated you on your work anniversary
                       </p>
                       <p className="text-xs text-gray-500">1 week ago</p>
                     </div>
@@ -440,21 +613,29 @@ export default function ProfilePageClient({ lang, userWithProfile, posts = [], p
             {/* Contact Info */}
             <Card className="bg-white shadow-sm">
               <CardHeader className="pb-4">
-                <CardTitle className="text-lg font-semibold">Contact info</CardTitle>
+                <CardTitle className="text-lg font-semibold">
+                  Contact info
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-center space-x-2">
                   <Mail className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm text-gray-700">{currentUser.email}</span>
+                  <span className="text-sm text-gray-700">
+                    {currentUser.email}
+                  </span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Phone className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm text-gray-700">{currentUser.phone}</span>
+                  <span className="text-sm text-gray-700">
+                    {currentUser.phone}
+                  </span>
                 </div>
                 {currentUser.website && (
                   <div className="flex items-center space-x-2">
                     <Globe className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm text-blue-600">{currentUser.website}</span>
+                    <span className="text-sm text-blue-600">
+                      {currentUser.website}
+                    </span>
                   </div>
                 )}
               </CardContent>
@@ -463,24 +644,40 @@ export default function ProfilePageClient({ lang, userWithProfile, posts = [], p
             {/* People Also Viewed */}
             <Card className="bg-white shadow-sm">
               <CardHeader className="pb-4">
-                <CardTitle className="text-lg font-semibold">People also viewed</CardTitle>
+                <CardTitle className="text-lg font-semibold">
+                  People also viewed
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {peopleAlsoViewed.length === 0 ? (
-                  <p className="text-sm text-gray-500">No suggestions right now.</p>
+                  <p className="text-sm text-gray-500">
+                    No suggestions right now.
+                  </p>
                 ) : (
                   peopleAlsoViewed.map((person) => (
-                    <Link href={`/${lang}/user/${person.id}`} key={person.id} className="flex items-center space-x-3 hover:bg-gray-50 p-1 rounded-md">
+                    <Link
+                      href={`/${lang}/user/${person.id}`}
+                      key={person.id}
+                      className="flex items-center space-x-3 hover:bg-gray-50 p-1 rounded-md"
+                    >
                       <Avatar className="h-10 w-10">
-                        <AvatarImage src={getAvatarUrl(person.image, person.name)} />
+                        <AvatarImage
+                          src={getAvatarUrl(person.image, person.name)}
+                        />
                         <AvatarFallback className="bg-gradient-to-r from-green-500 to-blue-500 text-white">
-                          {person.name.split(" ").map((n) => n[0]).join("").toUpperCase()}
+                          {person.name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")
+                            .toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <div>
                         <p className="font-medium text-sm">{person.name}</p>
                         {person.headline && (
-                          <p className="text-xs text-gray-500">{person.headline}</p>
+                          <p className="text-xs text-gray-500">
+                            {person.headline}
+                          </p>
                         )}
                       </div>
                     </Link>
@@ -492,24 +689,40 @@ export default function ProfilePageClient({ lang, userWithProfile, posts = [], p
             {/* Similar Profiles */}
             <Card className="bg-white shadow-sm">
               <CardHeader className="pb-4">
-                <CardTitle className="text-lg font-semibold">Similar profiles</CardTitle>
+                <CardTitle className="text-lg font-semibold">
+                  Similar profiles
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {similarProfiles.length === 0 ? (
-                  <p className="text-sm text-gray-500">No similar profiles found.</p>
+                  <p className="text-sm text-gray-500">
+                    No similar profiles found.
+                  </p>
                 ) : (
                   similarProfiles.map((person) => (
-                    <Link href={`/${lang}/user/${person.id}`} key={person.id} className="flex items-center space-x-3 hover:bg-gray-50 p-1 rounded-md">
+                    <Link
+                      href={`/${lang}/user/${person.id}`}
+                      key={person.id}
+                      className="flex items-center space-x-3 hover:bg-gray-50 p-1 rounded-md"
+                    >
                       <Avatar className="h-10 w-10">
-                        <AvatarImage src={getAvatarUrl(person.image, person.name)} />
+                        <AvatarImage
+                          src={getAvatarUrl(person.image, person.name)}
+                        />
                         <AvatarFallback className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white">
-                          {person.name.split(" ").map((n) => n[0]).join("").toUpperCase()}
+                          {person.name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")
+                            .toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <div>
                         <p className="font-medium text-sm">{person.name}</p>
                         {person.headline && (
-                          <p className="text-xs text-gray-500">{person.headline}</p>
+                          <p className="text-xs text-gray-500">
+                            {person.headline}
+                          </p>
                         )}
                       </div>
                     </Link>
@@ -521,10 +734,15 @@ export default function ProfilePageClient({ lang, userWithProfile, posts = [], p
             {/* Applications Link */}
             <Card className="bg-white shadow-sm">
               <CardHeader className="pb-4">
-                <CardTitle className="text-lg font-semibold">Your applications</CardTitle>
+                <CardTitle className="text-lg font-semibold">
+                  Your applications
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <Link href={`/${lang}/jobs/applied`} className="text-blue-600 hover:underline text-sm">
+                <Link
+                  href={`/${lang}/jobs/applied`}
+                  className="text-blue-600 hover:underline text-sm"
+                >
                   View all jobs you applied to
                 </Link>
               </CardContent>
@@ -533,10 +751,15 @@ export default function ProfilePageClient({ lang, userWithProfile, posts = [], p
             {/* Privacy & Safety */}
             <Card className="bg-white shadow-sm">
               <CardHeader className="pb-4">
-                <CardTitle className="text-lg font-semibold">Privacy & Safety</CardTitle>
+                <CardTitle className="text-lg font-semibold">
+                  Privacy & Safety
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <Link href={`/${lang}/blocked`} className="text-blue-600 hover:underline text-sm">
+                <Link
+                  href={`/${lang}/blocked`}
+                  className="text-blue-600 hover:underline text-sm"
+                >
                   Manage blocked users
                 </Link>
               </CardContent>
@@ -545,5 +768,5 @@ export default function ProfilePageClient({ lang, userWithProfile, posts = [], p
         </div>
       </div>
     </div>
-  )
-} 
+  );
+}

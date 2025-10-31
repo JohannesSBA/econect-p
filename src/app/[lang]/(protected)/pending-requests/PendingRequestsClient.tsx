@@ -1,54 +1,56 @@
-"use client"
+"use client";
 
-import { useRouter } from "next/navigation"
-import { useState, useTransition } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { MapPin, Check, X, MessageSquare, Clock } from "lucide-react"
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { MapPin, Check, X, MessageSquare, Clock } from "lucide-react";
 
 type BasicUser = {
-  id: string
-  name: string
-  image?: string | null
-  headline?: string | null
-  location?: string | null
-}
+  id: string;
+  name: string;
+  image?: string | null;
+  headline?: string | null;
+  location?: string | null;
+};
 
 type ReceivedRequest = {
-  id: string
-  createdAt: string | Date
-  sender: BasicUser
-}
+  id: string;
+  createdAt: string | Date;
+  sender: BasicUser;
+};
 
 type SentRequest = {
-  id: string
-  createdAt: string | Date
-  receiver: BasicUser
-}
+  id: string;
+  createdAt: string | Date;
+  receiver: BasicUser;
+};
 
 interface PendingRequestsClientProps {
-  lang: string
-  receivedRequests: ReceivedRequest[]
-  sentRequests: SentRequest[]
+  receivedRequests: ReceivedRequest[];
+  sentRequests: SentRequest[];
 }
 
-export default function PendingRequestsClient({ lang, receivedRequests, sentRequests }: PendingRequestsClientProps) {
-  const router = useRouter()
-  const [isPending, startTransition] = useTransition()
-  const [received, setReceived] = useState<ReceivedRequest[]>(receivedRequests)
-  const [sent] = useState<SentRequest[]>(sentRequests)
+export default function PendingRequestsClient({
+  receivedRequests,
+  sentRequests,
+}: PendingRequestsClientProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [received, setReceived] = useState<ReceivedRequest[]>(receivedRequests);
+  const [sent] = useState<SentRequest[]>(sentRequests);
 
   async function acceptRequest(senderUserId: string) {
     await fetch("/api/connection/accept", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId: senderUserId }),
-    })
+    });
     // Optimistically update and refresh server data
-    setReceived(prev => prev.filter(r => r.sender.id !== senderUserId))
-    startTransition(() => router.refresh())
+    setReceived((prev) => prev.filter((r) => r.sender.id !== senderUserId));
+    startTransition(() => router.refresh());
   }
 
   async function declineRequest(senderUserId: string) {
@@ -56,9 +58,9 @@ export default function PendingRequestsClient({ lang, receivedRequests, sentRequ
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId: senderUserId }),
-    })
-    setReceived(prev => prev.filter(r => r.sender.id !== senderUserId))
-    startTransition(() => router.refresh())
+    });
+    setReceived((prev) => prev.filter((r) => r.sender.id !== senderUserId));
+    startTransition(() => router.refresh());
   }
 
   return (
@@ -66,23 +68,41 @@ export default function PendingRequestsClient({ lang, receivedRequests, sentRequ
       {/* Received Requests */}
       <Card className="bg-white shadow-sm">
         <CardHeader>
-          <CardTitle className="text-lg font-semibold">Received Requests</CardTitle>
+          <CardTitle className="text-lg font-semibold">
+            Received Requests
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {received.map((request) => (
-            <div key={request.id} className="flex items-center space-x-4 p-4 border border-gray-200 rounded-lg hover:border-blue-300 transition-colors">
+            <div
+              key={request.id}
+              className="flex items-center space-x-4 p-4 border border-gray-200 rounded-lg hover:border-blue-300 transition-colors"
+            >
               <Avatar className="h-12 w-12">
-                <AvatarImage src={request.sender.image || "/placeholder.svg?height=48&width=48"} />
+                <AvatarImage
+                  src={
+                    request.sender.image ||
+                    "/placeholder.svg?height=48&width=48"
+                  }
+                />
                 <AvatarFallback className="bg-gradient-to-r from-green-500 to-blue-500 text-white">
-                  {request.sender.name.split(" ").map((n: string) => n[0]).join("").toUpperCase()}
+                  {request.sender.name
+                    .split(" ")
+                    .map((n: string) => n[0])
+                    .join("")
+                    .toUpperCase()}
                 </AvatarFallback>
               </Avatar>
 
               <div className="flex-1">
                 <div className="flex items-start justify-between">
                   <div>
-                    <h3 className="font-semibold text-gray-900">{request.sender.name}</h3>
-                    <p className="text-gray-600 text-sm">{request.sender.headline}</p>
+                    <h3 className="font-semibold text-gray-900">
+                      {request.sender.name}
+                    </h3>
+                    <p className="text-gray-600 text-sm">
+                      {request.sender.headline}
+                    </p>
                     <div className="flex items-center space-x-4 mt-1 text-xs text-gray-500">
                       {request.sender.location && (
                         <>
@@ -93,7 +113,9 @@ export default function PendingRequestsClient({ lang, receivedRequests, sentRequ
                           <span>•</span>
                         </>
                       )}
-                      <span>{new Date(request.createdAt).toLocaleDateString()}</span>
+                      <span>
+                        {new Date(request.createdAt).toLocaleDateString()}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -134,19 +156,35 @@ export default function PendingRequestsClient({ lang, receivedRequests, sentRequ
         </CardHeader>
         <CardContent className="space-y-4">
           {sent.map((request) => (
-            <div key={request.id} className="flex items-start space-x-4 p-4 border border-gray-200 rounded-lg">
+            <div
+              key={request.id}
+              className="flex items-start space-x-4 p-4 border border-gray-200 rounded-lg"
+            >
               <Avatar className="h-12 w-12">
-                <AvatarImage src={request.receiver.image || "/placeholder.svg?height=48&width=48"} />
+                <AvatarImage
+                  src={
+                    request.receiver.image ||
+                    "/placeholder.svg?height=48&width=48"
+                  }
+                />
                 <AvatarFallback className="bg-gradient-to-r from-purple-500 to-pink-500 text-white">
-                  {request.receiver.name.split(" ").map((n: string) => n[0]).join("").toUpperCase()}
+                  {request.receiver.name
+                    .split(" ")
+                    .map((n: string) => n[0])
+                    .join("")
+                    .toUpperCase()}
                 </AvatarFallback>
               </Avatar>
 
               <div className="flex-1">
                 <div className="flex items-start justify-between">
                   <div>
-                    <h3 className="font-semibold text-gray-900">{request.receiver.name}</h3>
-                    <p className="text-gray-600 text-sm">{request.receiver.headline}</p>
+                    <h3 className="font-semibold text-gray-900">
+                      {request.receiver.name}
+                    </h3>
+                    <p className="text-gray-600 text-sm">
+                      {request.receiver.headline}
+                    </p>
                     <div className="flex items-center space-x-4 mt-1 text-xs text-gray-500">
                       {request.receiver.location && (
                         <>
@@ -157,10 +195,15 @@ export default function PendingRequestsClient({ lang, receivedRequests, sentRequ
                           <span>•</span>
                         </>
                       )}
-                      <span>{new Date(request.createdAt).toLocaleDateString()}</span>
+                      <span>
+                        {new Date(request.createdAt).toLocaleDateString()}
+                      </span>
                     </div>
                   </div>
-                  <Badge variant="secondary" className="bg-yellow-100 text-yellow-700">
+                  <Badge
+                    variant="secondary"
+                    className="bg-yellow-100 text-yellow-700"
+                  >
                     <Clock className="h-3 w-3 mr-1" />
                     Pending
                   </Badge>
@@ -182,7 +225,5 @@ export default function PendingRequestsClient({ lang, receivedRequests, sentRequ
         </CardContent>
       </Card>
     </>
-  )
+  );
 }
-
-

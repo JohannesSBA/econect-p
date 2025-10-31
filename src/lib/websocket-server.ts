@@ -1,6 +1,6 @@
-import { WebSocketServer, WebSocket } from 'ws';
-import { IncomingMessage } from 'http';
-import { URL } from 'url';
+import { WebSocketServer, WebSocket } from "ws";
+import { IncomingMessage, Server } from "http";
+import { URL } from "url";
 
 interface ConnectedUser {
   userId: string;
@@ -12,15 +12,15 @@ class WebSocketManager {
   private wss: WebSocketServer | null = null;
   private connectedUsers: Map<string, ConnectedUser> = new Map();
 
-  initialize(server: any) {
+  initialize(server: Server) {
     this.wss = new WebSocketServer({ server });
 
-    this.wss.on('connection', (ws: WebSocket, request: IncomingMessage) => {
+    this.wss.on("connection", (ws: WebSocket, request: IncomingMessage) => {
       const url = new URL(request.url!, `http://${request.headers.host}`);
-      const userId = url.searchParams.get('userId');
+      const userId = url.searchParams.get("userId");
 
       if (!userId) {
-        ws.close(1008, 'User ID required');
+        ws.close(1008, "User ID required");
         return;
       }
 
@@ -28,101 +28,109 @@ class WebSocketManager {
       this.connectedUsers.set(userId, {
         userId,
         ws,
-        isOnline: true
+        isOnline: true,
       });
 
       console.log(`User ${userId} connected`);
 
       // Send online status to other users
       this.broadcastToOthers(userId, {
-        type: 'user_online',
+        type: "user_online",
         payload: {
           userId,
           isOnline: true,
-          lastSeen: new Date().toISOString()
-        }
+          lastSeen: new Date().toISOString(),
+        },
       });
 
-      ws.on('message', (data: Buffer) => {
+      ws.on("message", (data: Buffer) => {
         try {
           const message = JSON.parse(data.toString());
           this.handleMessage(userId, message);
         } catch (error) {
-          console.error('Error parsing message:', error);
+          console.error("Error parsing message:", error);
         }
       });
 
-      ws.on('close', () => {
+      ws.on("close", () => {
         this.handleUserDisconnect(userId);
       });
 
-      ws.on('error', (error: Error) => {
+      ws.on("error", (error: Error) => {
         console.error(`WebSocket error for user ${userId}:`, error);
         this.handleUserDisconnect(userId);
       });
     });
   }
 
-  private handleMessage(senderId: string, message: any) {
-    switch (message.type) {
-      case 'ping':
+  private handleMessage(
+    senderId: string,
+    message: Record<string, unknown> | null,
+  ) {
+    switch (message?.type) {
+      case "ping":
         // send pong to sender only
-        this.sendToUser(senderId, { type: 'pong', payload: { ts: message.payload?.ts || Date.now() } })
+        this.sendToUser(senderId, {
+          type: "pong",
+          payload: {
+            ts: (message?.payload as { ts?: number })?.ts ?? Date.now(),
+          },
+        });
         break;
-      case 'new_message':
+      case "new_message":
         this.broadcastToOthers(senderId, {
-          type: 'new_message',
-          payload: message.payload
+          type: "new_message",
+          payload: message?.payload,
         });
         break;
 
-      case 'typing_start':
+      case "typing_start":
         this.broadcastToOthers(senderId, {
-          type: 'typing_start',
+          type: "typing_start",
           payload: {
             userId: senderId,
-            chatId: message.payload.chatId,
+            chatId: (message?.payload as { chatId?: string })?.chatId,
             isTyping: true,
-            userName: message.payload.userName,
-          }
+            userName: (message?.payload as { userName?: string })?.userName,
+          },
         });
         break;
 
-      case 'typing_stop':
+      case "typing_stop":
         this.broadcastToOthers(senderId, {
-          type: 'typing_stop',
+          type: "typing_stop",
           payload: {
             userId: senderId,
-            chatId: message.payload.chatId,
+            chatId: (message?.payload as { chatId?: string })?.chatId,
             isTyping: false,
-            userName: message.payload.userName,
-          }
+            userName: (message?.payload as { userName?: string })?.userName,
+          },
         });
         break;
 
-      case 'message_reaction':
+      case "message_reaction":
         this.broadcastToAll({
-          type: 'message_reaction',
-          payload: message.payload
+          type: "message_reaction",
+          payload: message?.payload,
         });
         break;
 
-      case 'message_edited':
+      case "message_edited":
         this.broadcastToOthers(senderId, {
-          type: 'message_edited',
-          payload: message.payload
+          type: "message_edited",
+          payload: message?.payload,
         });
         break;
 
-      case 'message_deleted':
+      case "message_deleted":
         this.broadcastToOthers(senderId, {
-          type: 'message_deleted',
-          payload: message.payload
+          type: "message_deleted",
+          payload: message?.payload,
         });
         break;
 
       default:
-        console.log('Unknown message type:', message.type);
+        console.log("Unknown message type:", message?.type);
     }
   }
 
@@ -131,22 +139,25 @@ class WebSocketManager {
     if (user) {
       user.isOnline = false;
       this.connectedUsers.delete(userId);
-      
+
       console.log(`User ${userId} disconnected`);
 
       // Notify other users
       this.broadcastToOthers(userId, {
-        type: 'user_online',
+        type: "user_online",
         payload: {
           userId,
           isOnline: false,
-          lastSeen: new Date().toISOString()
-        }
+          lastSeen: new Date().toISOString(),
+        },
       });
     }
   }
 
-  private broadcastToOthers(senderId: string, message: any) {
+  private broadcastToOthers(
+    senderId: string,
+    message: Record<string, unknown> | null,
+  ) {
     this.connectedUsers.forEach((user, userId) => {
       if (userId !== senderId && user.ws.readyState === WebSocket.OPEN) {
         user.ws.send(JSON.stringify(message));
@@ -154,7 +165,7 @@ class WebSocketManager {
     });
   }
 
-  private broadcastToAll(message: any) {
+  private broadcastToAll(message: Record<string, unknown> | null) {
     this.connectedUsers.forEach((user) => {
       if (user.ws.readyState === WebSocket.OPEN) {
         user.ws.send(JSON.stringify(message));
@@ -163,14 +174,18 @@ class WebSocketManager {
   }
 
   // Public methods for external use
-  sendToUser(userId: string, message: any) {
+  sendToUser(userId: string, message: Record<string, unknown> | null) {
     const user = this.connectedUsers.get(userId);
     if (user && user.ws.readyState === WebSocket.OPEN) {
       user.ws.send(JSON.stringify(message));
     }
   }
 
-  broadcastToChat(chatId: string, message: any, excludeUserId?: string) {
+  broadcastToChat(
+    chatId: string,
+    message: Record<string, unknown> | null,
+    excludeUserId?: string,
+  ) {
     this.connectedUsers.forEach((user, userId) => {
       if (userId !== excludeUserId && user.ws.readyState === WebSocket.OPEN) {
         user.ws.send(JSON.stringify(message));
@@ -187,4 +202,4 @@ class WebSocketManager {
   }
 }
 
-export const wsManager = new WebSocketManager(); 
+export const wsManager = new WebSocketManager();

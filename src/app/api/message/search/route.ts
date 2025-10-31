@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import prisma from "@/lib/prisma";
+import type { Prisma } from "@/generated/prisma";
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -23,7 +24,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    let whereClause: any = {
+    const whereClause: Prisma.MessageWhereInput = {
       OR: [
         { senderId: user.id },
         { recipientId: user.id }

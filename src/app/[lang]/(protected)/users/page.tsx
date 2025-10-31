@@ -1,19 +1,13 @@
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Separator } from "@/components/ui/separator"
 import {
   Search,
   Users,
-  UserPlus,
   MessageSquare,
-  MoreHorizontal,
   MapPin,
-  Filter,
-  Check,
-  X,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react"
@@ -22,7 +16,8 @@ import Header from "../components/Header"
 import { getCurrentUser } from "@/lib/getCurrentUser"
 import prisma from "@/lib/prisma"
 import { chatHrefConstructor } from "@/lib/utils"
-import ConnectionButton from "@/components/ConnectionButton"
+import ConnectionButton, { type ConnectionStatus } from "@/components/ConnectionButton"
+import type { Prisma } from "@/generated/prisma"
 
 interface UsersPageProps {
   params: Promise<{ lang: 'en' | 'am' }>
@@ -65,7 +60,7 @@ export default async function UsersPage({ params, searchParams }: UsersPageProps
   }
 
   // Build where clause for filtering
-  const whereClause: any = {
+  const whereClause: Prisma.UserWhereInput = {
     id: { not: currentUser.id },
     role: { not: "ADMIN" } // Exclude admin accounts
   }
@@ -73,20 +68,20 @@ export default async function UsersPage({ params, searchParams }: UsersPageProps
   // Add search filter if provided
   if (search) {
     whereClause.OR = [
-      { name: { contains: search, mode: 'insensitive' } },
-      { headline: { contains: search, mode: 'insensitive' } },
-      { location: { contains: search, mode: 'insensitive' } },
+      { name: { contains: search, mode: "insensitive" } },
+      { headline: { contains: search, mode: "insensitive" } },
+      { location: { contains: search, mode: "insensitive" } },
       {
         profile: {
           skills: {
             some: {
               skill: {
-                name: { contains: search, mode: 'insensitive' }
-              }
-            }
-          }
-        }
-      }
+                name: { contains: search, mode: "insensitive" },
+              },
+            },
+          },
+        },
+      },
     ]
   }
 
@@ -197,7 +192,8 @@ export default async function UsersPage({ params, searchParams }: UsersPageProps
             
             const isConnected = connection?.status === 'ACCEPTED'
             const hasPendingRequest = connection?.status === 'PENDING'
-            const isRequestSentByMe = hasPendingRequest && connection.senderId === currentUser.id
+            const isRequestSentByMe = hasPendingRequest && connection?.senderId === currentUser.id
+            const connectionStatus: ConnectionStatus = connection ? connection.status as ConnectionStatus : "NONE"
 
             return (
               <Card key={user.id} className="bg-white shadow-sm hover:shadow-md transition-shadow">
@@ -255,7 +251,7 @@ export default async function UsersPage({ params, searchParams }: UsersPageProps
                         ) : (
                           <ConnectionButton 
                             userId={user.id} 
-                            connectionStatus={connection?.status as any}
+                            connectionStatus={connectionStatus}
                             isRequestSentByMe={isRequestSentByMe}
                           />
                         )}

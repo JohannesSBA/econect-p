@@ -1,136 +1,178 @@
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/options";
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import MessagingInterface from "../../components/MessagingInterface";
+import MessagingInterface from "../components/MessagingInterface";
 import { getCurrentUser } from "@/lib/getCurrentUser";
-import { User } from "@/../types/prisma";
 import prisma from "@/lib/prisma";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getAvatarUrl } from "@/lib/image-utils";
+import { Button } from "@/components/ui/button";
 
-interface ChatPageProps {
-  params: Promise<{ lang: string; chatid: string }>
-}
+export default async function ChatPage({
+  params,
+}: {
+  params: Promise<{ lang: "en" | "am"; chatid: string }>;
+}) {
+  const { chatid, lang } = await params;
 
-export default async function ChatPage({ params }: ChatPageProps) {
-    const { chatid } = await params;
-    const session = await getServerSession(authOptions);
-    if (!session) notFound();
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    return notFound();
+  }
 
-    const user = await getCurrentUser() as unknown as User;
-    if (!user) notFound();
+  const [first, second] = (chatid ?? "").split("--");
+  if (!first || !second) {
+    return notFound();
+  }
 
-    const [id1, id2] = chatid.split("--");
-    if (!id1 || !id2) notFound();
+  const userId = currentUser.id;
+  const friendId = userId === first ? second : userId === second ? first : null;
 
-    const userId = session.user.id;
-    const friendId = userId === id1 ? id2 : id1;
-    console.log("userId", userId)
-    console.log("friendId", friendId)
+  if (!friendId) {
+    return notFound();
+  }
 
-    // Verify access: allow if connected OR either user is employer/recruiter/admin OR there is a message request between them
-    // Block if either direction has been blocked
-    const blocked = await (prisma as any).userBlock.findFirst({
+  const [
+    blockedEntry,
+    participants,
+    connection,
+    messageRequest,
+    previousMessage,
+  ] = await Promise.all([
+    prisma.userBlock.findFirst({
       where: {
         OR: [
           { blockerId: userId, blockedId: friendId },
           { blockerId: friendId, blockedId: userId },
-        ]
+        ],
       },
-      select: { id: true }
-    })
-    console.log("blocked", blocked)
-    if (blocked) notFound()
-
-    const self = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } })
-    const partner = await prisma.user.findUnique({ where: { id: friendId }, select: { role: true } })
-    const eitherEmployer = ['EMPLOYER','RECRUITER','ADMIN'].includes((self?.role as any)) || ['EMPLOYER','RECRUITER','ADMIN'].includes((partner?.role as any))
-
-    const connection = await prisma.connection.findFirst({
+      select: { id: true },
+    }),
+    prisma.user.findMany({
+      where: { id: { in: [userId, friendId] } },
+      select: { id: true, role: true },
+    }),
+    prisma.connection.findFirst({
       where: {
         OR: [
-          { senderId: userId, receiverId: friendId, status: 'ACCEPTED' },
-          { senderId: friendId, receiverId: userId, status: 'ACCEPTED' }
-        ]
-      }
-    })
-    console.log("connection", connection)
+          { senderId: userId, receiverId: friendId, status: "ACCEPTED" },
+          { senderId: friendId, receiverId: userId, status: "ACCEPTED" },
+        ],
+      },
+      select: { id: true },
+    }),
+    prisma.messageRequest.findFirst({
+      where: {
+        OR: [
+          { senderId: userId, recipientId: friendId },
+          { senderId: friendId, recipientId: userId },
+        ],
+      },
+      select: { id: true },
+    }),
+    prisma.message.findFirst({
+      where: {
+        OR: [
+          { senderId: userId, recipientId: friendId },
+          { senderId: friendId, recipientId: userId },
+        ],
+      },
+      select: { id: true },
+    }),
+  ]);
 
-    // Check if a message request exists in either direction (PENDING or ACCEPTED)
-    let hasMessageRequest = false
-    try {
-      const req = await (prisma as any).messageRequest.findFirst({
-        where: {
-          OR: [
-            { senderId: userId, recipientId: friendId },
-            { senderId: friendId, recipientId: userId },
-          ]
-        },
-        select: { id: true }
-      })
-      hasMessageRequest = Boolean(req)
-    } catch {}
+  if (blockedEntry) {
+    return notFound();
+  }
 
-    let hasMessages = false
-    try {
-      const messages = await prisma.message.findMany({
-        where: {
-          OR: [
-            { senderId: userId, recipientId: friendId },
-            { senderId: friendId, recipientId: userId },
-          ]
-        }
-      })
-      hasMessages = messages.length > 0
-    } catch {
-      hasMessages = false
-    }
-    console.log("hasMessages", hasMessages)
+  const elevatedRoles = new Set(["EMPLOYER", "RECRUITER", "ADMIN"]);
+  const eitherElevated = participants.some(({ role }) =>
+    elevatedRoles.has(role as string),
+  );
 
-    if (!connection && !eitherEmployer && !hasMessageRequest && !hasMessages) {
-      // If not connected, not employer conversation, and no message request, block access
-      notFound()
-    }
+  const accessGranted = Boolean(
+    connection || eitherElevated || messageRequest || previousMessage,
+  );
 
-    // Get the chat partner's information
-    const chatPartner = await prisma.user.findUnique({
-      where: { id: friendId },
-      select: {
-        id: true,
-        name: true,
-        image: true,
-        headline: true,
-        email: true,
-      }
-    });
+  if (!accessGranted) {
+    return notFound();
+  }
 
-    if (!chatPartner) notFound();
+  const chatPartner = await prisma.user.findUnique({
+    where: { id: friendId },
+    select: {
+      id: true,
+      name: true,
+      image: true,
+      headline: true,
+      email: true,
+    },
+  });
 
-    return (
-        <div className="min-h-screen bg-gray-50 flex flex-col">
-          <div className="flex-1 flex">
-            {/* Chat Interface */}
-            <div className="flex-1 flex flex-col">
-              {/* Chat Header */}
-              <div className="bg-white border-b px-6 py-4 sticky top-0 z-30">
-                <div className="flex items-center space-x-3">
-                  <Avatar className="h-6 w-6">
-                    <AvatarImage src={getAvatarUrl(chatPartner.image, chatPartner.name)} />
-                    <AvatarFallback>{(chatPartner.name || 'U').slice(0,1).toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h2 className="font-semibold text-gray-900">{chatPartner.name}</h2>
-                    <p className="text-sm text-gray-500">{chatPartner.email}</p>
-                  </div>
+  if (!chatPartner) {
+    return notFound();
+  }
+
+  const profileHref = `/${lang}/(protected)/user/${chatPartner.id}`;
+  const partnerInitial = (chatPartner.name || "U").slice(0, 1).toUpperCase();
+
+  return (
+    <div className="flex flex-1 flex-col gap-6">
+      <div className="sticky top-0 z-30 -mx-3 sm:mx-0">
+        <div className="rounded-3xl border border-white/60 bg-white/95 px-6 py-5 shadow-xl backdrop-blur supports-[backdrop-filter]:backdrop-blur-md sm:px-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-4">
+              <Avatar className="h-14 w-14 border border-blue-100 bg-blue-50 text-lg">
+                <AvatarImage
+                  src={getAvatarUrl(chatPartner.image, chatPartner.name)}
+                  alt={chatPartner.name ?? "Contact"}
+                />
+                <AvatarFallback>{partnerInitial}</AvatarFallback>
+              </Avatar>
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <h1 className="text-xl font-semibold text-slate-900 sm:text-2xl">
+                    {chatPartner.name}
+                  </h1>
+                  <span className="flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-600">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                    Available to chat
+                  </span>
                 </div>
+                {chatPartner.headline && (
+                  <p className="text-sm text-slate-500">
+                    {chatPartner.headline}
+                  </p>
+                )}
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                  {chatPartner.email}
+                </p>
               </div>
-              
-              {/* Messages */}
-              <div className="flex-1 overflow-hidden">
-                <MessagingInterface chatId={chatid} chatPartner={friendId} />
-              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                className="rounded-full border-slate-200"
+                asChild
+              >
+                <Link href={profileHref}>View profile</Link>
+              </Button>
+              <Button
+                className="rounded-full bg-blue-600 px-5 font-semibold text-white transition hover:bg-blue-700"
+                asChild
+              >
+                <Link href={`/${lang}/(protected)/connections`}>
+                  Manage connections
+                </Link>
+              </Button>
             </div>
           </div>
         </div>
-    );
+      </div>
+
+      <div className="flex min-h-[60vh] flex-1 rounded-3xl border border-white/60 bg-gradient-to-br from-slate-50 via-white to-slate-100 p-3 shadow-lg sm:p-6">
+        <MessagingInterface chatId={chatid} chatPartner={friendId} />
+      </div>
+    </div>
+  );
 }

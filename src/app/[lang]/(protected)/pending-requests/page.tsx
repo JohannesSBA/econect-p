@@ -14,8 +14,8 @@ import Header from "../components/Header"
 import { getCurrentUser } from "@/lib/getCurrentUser"
 import { User } from "@/../types/prisma"
 import prisma from "@/lib/prisma"
-import { revalidatePath } from "next/cache"
 import PendingRequestsClient from "./PendingRequestsClient"
+import { SentRequest } from "../../../../../types/types"
 
 export default async function PendingRequestsPage({ params }: { params: Promise<{ lang: 'en' | 'am' }> }) {
   const { lang } = await params
@@ -92,21 +92,35 @@ export default async function PendingRequestsPage({ params }: { params: Promise<
           <div className="lg:col-span-1">
             <Card className="bg-white shadow-sm sticky top-20">
               <CardHeader>
-                <CardTitle className="text-lg font-semibold">Connection Requests</CardTitle>
+                <CardTitle className="text-lg font-semibold">
+                  Connection Requests
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Link href={`/${lang}/pending-requests`} className="flex items-center space-x-2 p-2 rounded-lg bg-blue-50 text-blue-700">
+                  <Link
+                    href={`/${lang}/pending-requests`}
+                    className="flex items-center space-x-2 p-2 rounded-lg bg-blue-50 text-blue-700"
+                  >
                     <Users className="h-4 w-4" />
                     <span className="text-sm font-medium">Received</span>
-                    <Badge variant="secondary" className="ml-auto bg-blue-100 text-blue-700">
+                    <Badge
+                      variant="secondary"
+                      className="ml-auto bg-blue-100 text-blue-700"
+                    >
                       {receivedRequests.length}
                     </Badge>
                   </Link>
-                  <Link href={`/${lang}/pending-requests?type=sent`} className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-50 text-gray-700">
+                  <Link
+                    href={`/${lang}/pending-requests?type=sent`}
+                    className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-50 text-gray-700"
+                  >
                     <UserPlus className="h-4 w-4" />
                     <span className="text-sm">Sent</span>
-                    <Badge variant="secondary" className="ml-auto bg-gray-100 text-gray-700">
+                    <Badge
+                      variant="secondary"
+                      className="ml-auto bg-gray-100 text-gray-700"
+                    >
                       {sentRequests.length}
                     </Badge>
                   </Link>
@@ -118,20 +132,40 @@ export default async function PendingRequestsPage({ params }: { params: Promise<
                   <h4 className="font-medium text-gray-900 mb-2">Filter by</h4>
                   <div className="space-y-2">
                     <label className="flex items-center space-x-2">
-                      <input type="checkbox" className="rounded border-gray-300" />
-                      <span className="text-sm text-gray-700">High mutual connections</span>
+                      <input
+                        type="checkbox"
+                        className="rounded border-gray-300"
+                      />
+                      <span className="text-sm text-gray-700">
+                        High mutual connections
+                      </span>
                     </label>
                     <label className="flex items-center space-x-2">
-                      <input type="checkbox" className="rounded border-gray-300" />
-                      <span className="text-sm text-gray-700">Same industry</span>
+                      <input
+                        type="checkbox"
+                        className="rounded border-gray-300"
+                      />
+                      <span className="text-sm text-gray-700">
+                        Same industry
+                      </span>
                     </label>
                     <label className="flex items-center space-x-2">
-                      <input type="checkbox" className="rounded border-gray-300" />
-                      <span className="text-sm text-gray-700">Recent requests</span>
+                      <input
+                        type="checkbox"
+                        className="rounded border-gray-300"
+                      />
+                      <span className="text-sm text-gray-700">
+                        Recent requests
+                      </span>
                     </label>
                     <label className="flex items-center space-x-2">
-                      <input type="checkbox" className="rounded border-gray-300" />
-                      <span className="text-sm text-gray-700">With messages</span>
+                      <input
+                        type="checkbox"
+                        className="rounded border-gray-300"
+                      />
+                      <span className="text-sm text-gray-700">
+                        With messages
+                      </span>
                     </label>
                   </div>
                 </div>
@@ -172,24 +206,35 @@ export default async function PendingRequestsPage({ params }: { params: Promise<
 
             <PendingRequestsClient
               lang={lang}
-              receivedRequests={receivedRequests as any}
-              sentRequests={sentRequests as any}
+              receivedRequests={receivedRequests as ReceivedRequest[]}
+              sentRequests={sentRequests as SentRequest[]}
             />
 
             {/* Tips */}
             <Card className="bg-white shadow-sm">
               <CardHeader>
-                <CardTitle className="text-lg font-semibold">Tips for managing requests</CardTitle>
+                <CardTitle className="text-lg font-semibold">
+                  Tips for managing requests
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="p-4 bg-blue-50 rounded-lg">
-                    <h4 className="font-medium text-blue-900 mb-2">Accept strategically</h4>
-                    <p className="text-sm text-blue-700">Connect with people who can help your career or share valuable insights</p>
+                    <h4 className="font-medium text-blue-900 mb-2">
+                      Accept strategically
+                    </h4>
+                    <p className="text-sm text-blue-700">
+                      Connect with people who can help your career or share
+                      valuable insights
+                    </p>
                   </div>
                   <div className="p-4 bg-green-50 rounded-lg">
-                    <h4 className="font-medium text-green-900 mb-2">Send personalized messages</h4>
-                    <p className="text-sm text-green-700">Include a brief note explaining why you want to connect</p>
+                    <h4 className="font-medium text-green-900 mb-2">
+                      Send personalized messages
+                    </h4>
+                    <p className="text-sm text-green-700">
+                      Include a brief note explaining why you want to connect
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -198,5 +243,5 @@ export default async function PendingRequestsPage({ params }: { params: Promise<
         </div>
       </div>
     </div>
-  )
+  );
 } 
