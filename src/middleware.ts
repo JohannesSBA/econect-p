@@ -17,9 +17,6 @@ export async function middleware(req: NextRequest) {
   }
 
   // Root → /en
-  if (pathname === "/") {
-    return NextResponse.redirect(new URL("/en", req.url));
-  }
 
   // Must be under /{lang}/...
   const localeMatch = pathname.match(/^\/(en|am|om)(\/|$)/);

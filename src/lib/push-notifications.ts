@@ -1,5 +1,15 @@
 import { PushNotification } from "@/types/message";
 
+type NotificationActionDescriptor = {
+  action: string;
+  title: string;
+  icon?: string;
+};
+
+type ExtendedNotificationOptions = NotificationOptions & {
+  actions?: NotificationActionDescriptor[];
+};
+
 class PushNotificationService {
   private isSupported: boolean;
   private permission: NotificationPermission = "default";
@@ -73,7 +83,7 @@ class PushNotificationService {
         typeof window !== "undefined"
           ? window.location.pathname.split("/")[1] || "en"
           : "en";
-      const options: NotificationOptions & { actions?: unknown[] } = {
+      const options: ExtendedNotificationOptions = {
         body: notification.body,
         icon: notification.icon || "/favicon.ico",
         badge: notification.badge,
@@ -84,16 +94,13 @@ class PushNotificationService {
           ...notification.data,
         },
         actions: [
-          // Text reply (supported on Android Chrome)
           {
             action: "reply",
             title: "Reply",
             icon: "/icon1.png",
-            type: "text",
-            placeholder: "Type a reply",
           },
           { action: "open_chat", title: "Open Chat", icon: "/icon1.png" },
-        ] as unknown as NotificationOptions["body"],
+        ],
       };
 
       if (reg && "showNotification" in reg) {

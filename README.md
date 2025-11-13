@@ -1,11 +1,11 @@
 # Econnect – Ethiopia's LinkedIn (Deployment-Ready Starter)
 
-A full-stack professional networking platform tailored for Ethiopia. Econnect ships with a Next.js 14 App Router frontend, Prisma + PostgreSQL data layer, Socket.IO real-time messaging, AWS S3 uploads, Chapa-powered employer payments, and full localisation in English (en), Amharic (am), and Afaan Oromo (om).
+A full-stack professional networking platform tailored for Ethiopia. Econnect ships with a Next.js 14 App Router frontend, Prisma + PostgreSQL data layer, Socket.IO real-time messaging, AWS S3 uploads, Chapa-powered employer payments, and a polished English-language experience out of the box.
 
 ---
 
 ## Tech Stack & Highlights
-- **Frontend**: Next.js App Router, TypeScript, Tailwind CSS, shadcn/ui components, localisation dictionaries in `src/app/dictionaries`.
+- **Frontend**: Next.js App Router, TypeScript, Tailwind CSS, shadcn/ui components.
 - **Backend**: Next.js API routes with Zod validation, Prisma ORM, NextAuth (credentials + extensible for OAuth).
 - **Database**: PostgreSQL 16 (local Docker Compose or managed service in production).
 - **Real-time**: Dedicated Socket.IO server (`server.js`) consumed by the client SDK in `src/lib/socket.ts`.
@@ -21,7 +21,7 @@ A full-stack professional networking platform tailored for Ethiopia. Econnect sh
 - Role-based access control (Admin, Employer, Job Seeker, Recruiter, Moderator) enforced in middleware and API routes.
 - Employer dashboard, job posting workflow, applications tracking, and Chapa paywall.
 - Resume/Cover letter management with S3 uploads and secure download URLs.
-- Profile editing (experience, education, skills, photo uploads) with localisation-aware UI.
+- Profile editing (experience, education, skills, photo uploads) with a responsive UI.
 - Notifications center with multi-channel delivery (in-app + push).
 
 ---
@@ -82,7 +82,7 @@ A full-stack professional networking platform tailored for Ethiopia. Econnect sh
    ```bash
    npm run dev       # runs start-dev.sh → Socket.IO + Next.js
    ```
-   The app becomes available at [http://localhost:3000/en](http://localhost:3000/en). Switch locales via the language selector.
+   The app becomes available at [http://localhost:3000](http://localhost:3000).
 
 **Split servers manually?**
 ```bash
@@ -120,7 +120,7 @@ NEXT_PUBLIC_SOCKET_URL=ws://localhost:3002
 CHAPA_PUBLIC_KEY=CHAPUB_xxx
 CHAPA_SECRET_KEY=CHASEC_xxx
 CHAPA_BASE_URL=https://api.chapa.co/v1
-CHAPA_RETURN_URL=http://localhost:3000/en/employer/dashboard
+CHAPA_RETURN_URL=http://localhost:3000/employer/dashboard
 CHAPA_CALLBACK_URL=http://localhost:3000/api/webhooks/chapa
 WEBHOOK_SECRET=dev_webhook_secret
 
@@ -151,7 +151,7 @@ The runtime automatically falls back to legacy env names (`S3ACCESS_KEY_ID`, `S3
 - Messaging UI: `src/app/[lang]/(protected)/components/MessagingInterface.tsx` with threaded conversations, attachments, and push notifications wired through `src/lib/push-notifications.ts`.
 - WebSocket tests: `tests/websocket.client.test.ts` covers client/server handshake defaults.
 
-Run messaging end-to-end locally by starting the stack with `npm run dev`, then opening two browsers on `/en/chat`.
+Run messaging end-to-end locally by starting the stack with `npm run dev`, then opening two browsers on `/chat`.
 
 ---
 
@@ -175,8 +175,6 @@ Run messaging end-to-end locally by starting the stack with `npm run dev`, then 
 
 ## Localisation
 - Dictionaries located in `src/app/dictionaries/{en,am,om}.json`.
-- Locale-aware routing lives at `src/app/[lang]/*`; middleware (`src/middleware.ts`) enforces locale prefix and RBAC.
-- Extend translations by editing dictionary JSON files and consuming them via the localisation utilities in `src/app/dictionaries/index.ts`.
 
 ---
 

@@ -2,6 +2,16 @@
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
+const paidListingFilter = {
+  isPublished: true,
+  status: 'OPEN' as const,
+  payments: {
+    some: {
+      status: 'PAID' as const,
+    },
+  },
+};
+
 export async function GET(request: Request) {
 
     console.log(request.url);
@@ -14,6 +24,7 @@ export async function GET(request: Request) {
         try {
             const jobs = await prisma.jobListing.findMany({
                 where: {
+                    ...paidListingFilter,
                     title: {
                         contains: search,
                         mode: 'insensitive'
@@ -45,6 +56,7 @@ export async function GET(request: Request) {
 
     try {
         const jobs = await prisma.jobListing.findMany({
+            where: paidListingFilter,
             orderBy: {
         createdAt: 'desc',
       },

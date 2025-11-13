@@ -9,7 +9,7 @@ export default function NotFound() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 relative overflow-hidden">
       {/* Header */}
-      <Header lang="en" />
+      <Header />
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-16 relative z-10">

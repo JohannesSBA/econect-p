@@ -7,11 +7,7 @@ import { JobListing } from '../../types/prisma';
 import { Input } from './ui/input';
 import Link from 'next/link';
 
-interface LandingJobListingsProps {
-    lang: string;
-}
-
-export default function LandingJobListings({ lang }: LandingJobListingsProps) {
+export default function LandingJobListings() {
   const [jobs, setJobs] = useState<JobListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -85,7 +81,7 @@ export default function LandingJobListings({ lang }: LandingJobListingsProps) {
           {jobs.length > 0 ? jobs.map((job) => (
             <Link
               key={job.id}
-              href={`/${lang}/jobs/${job.id}`}
+              href={`/jobs/${job.id}`}
               className="flex items-center cursor-pointer justify-between p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-100 hover:shadow-md transition-shadow"
             >
               <div>
