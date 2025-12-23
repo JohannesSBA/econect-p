@@ -5,7 +5,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import prisma from "@/lib/prisma";
 import { Prisma, UserRole } from "@/generated/prisma";
 
-async function requireAdmin(req: NextRequest) {
+async function requireAdmin() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     throw NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -22,7 +22,7 @@ async function requireAdmin(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
-    await requireAdmin(req);
+    await requireAdmin();
   } catch (response) {
     if (response instanceof NextResponse) {
       return response;
@@ -38,9 +38,7 @@ export async function GET(req: NextRequest) {
     100,
     Math.max(
       1,
-      Number(
-        searchParams.get("pageSize") ?? searchParams.get("limit") ?? 25,
-      ),
+      Number(searchParams.get("pageSize") ?? searchParams.get("limit") ?? 25),
     ),
   );
   const page = Math.max(1, Number(searchParams.get("page") ?? 1));
@@ -124,7 +122,7 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    await requireAdmin(req);
+    await requireAdmin();
   } catch (response) {
     if (response instanceof NextResponse) {
       return response;
@@ -166,10 +164,7 @@ export async function PATCH(req: NextRequest) {
     case "assignRole": {
       const newRole = body.role as keyof typeof UserRole | undefined;
       if (!newRole || !(newRole in UserRole)) {
-        return NextResponse.json(
-          { error: "Invalid role" },
-          { status: 400 },
-        );
+        return NextResponse.json({ error: "Invalid role" }, { status: 400 });
       }
       updatedUser = await prisma.user.update({
         where: { id: userId },
