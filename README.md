@@ -208,6 +208,14 @@ npm run test:e2e
 
 ---
 
+## Observability
+- **WebSocket metrics**: `server.js` now emits `[WS metrics] connections=X msgs_per_interval=Y total_msgs=Z` once per minute (configurable via `WS_METRICS_INTERVAL_MS`). That gives a quick read on how many live chat clients you have and whether throughput is spiking before saturation hits.
+- **Database timing**: Messaging APIs wrap Prisma calls in a lightweight `traceQuery` helper, logging `[DB] label 12.3ms` for user lookups, thread fetches, message inserts, etc. These logs surface slow queries straight in application output so you can catch regressions or missing indexes during load tests—long before end-users feel it.
+
+Keep these logs enabled in staging/production and wire them into CloudWatch or your log aggregator of choice to spot bottlenecks early.
+
+---
+
 ## Roadmap / Next Steps
 1. Connection suggestions & graph-powered recommendations.
 2. Advanced search (Postgres full-text + pg_trgm) across users, jobs, and posts.

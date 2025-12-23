@@ -42,7 +42,7 @@ export async function middleware(req: NextRequest) {
   }
 
   // 2) Protect only these routes
-  const protectedRoutes = ["dashboard", "profile", "settings"];
+  const protectedRoutes = ["dashboard", "profile", "settings", "admin"];
   if (protectedRoutes.includes(firstAfterLocale)) {
     // if NOT logged in → send to login
     if (!token) {

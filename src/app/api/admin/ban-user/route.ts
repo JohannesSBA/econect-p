@@ -10,6 +10,19 @@ export async function POST(req: NextRequest) {
   const user = await prisma.user.findUnique({ where: { email: session.user.email } });
   if (!user || user.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const { userId } = await req.json();
-  await prisma.user.delete({ where: { id: userId } });
-  return NextResponse.json({ success: true });
+  const target = await prisma.user.update({
+    where: { id: userId },
+    data: {
+      isSuspended: true,
+      suspendedAt: new Date(),
+    },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      isSuspended: true,
+      suspendedAt: true,
+    },
+  });
+  return NextResponse.json({ success: true, user: target });
 }

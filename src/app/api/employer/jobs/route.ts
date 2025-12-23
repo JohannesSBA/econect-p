@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import prisma from "@/lib/prisma";
+import { JobStatus } from "@/generated/prisma";
 
 // POST /api/employer/jobs - create a draft job (not published) for employer
 export async function POST(req: NextRequest) {
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest) {
       tags,
       salary,
       jobType,
-      status: 'PAUSED',
+      status: JobStatus.UNDER_REVIEW,
       isPublished: false,
       publishedAt: null,
       employerId: user.id,
@@ -37,4 +38,3 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json(job);
 }
-

@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import prisma from "@/lib/prisma";
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
-import { existsSync } from 'fs';
+import { uploadChatAttachment } from "@/lib/s3-upload";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_TYPES = [
@@ -50,23 +48,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "File type not allowed" }, { status: 400 });
     }
 
-    // Create uploads directory if it doesn't exist
-    const uploadsDir = join(process.cwd(), 'public', 'uploads');
-    if (!existsSync(uploadsDir)) {
-      await mkdir(uploadsDir, { recursive: true });
-    }
-
-    // Generate unique filename
-    const timestamp = Date.now();
-    const randomString = Math.random().toString(36).substring(2, 15);
-    const extension = file.name.split('.').pop();
-    const filename = `${timestamp}-${randomString}.${extension}`;
-    const filepath = join(uploadsDir, filename);
-
-    // Save file
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    await writeFile(filepath, buffer);
+    const fileUrl = await uploadChatAttachment(file, user.id, chatId);
 
     // Determine file type
     let fileType: 'image' | 'video' | 'audio' | 'document' | 'file' = 'file';
@@ -78,7 +60,7 @@ export async function POST(req: NextRequest) {
     // Return uploaded file metadata (DB record will be created when sending the message)
     return NextResponse.json({
       type: fileType,
-      url: `/uploads/${filename}`,
+      url: fileUrl,
       filename: file.name,
       size: file.size,
       mimeType: file.type,

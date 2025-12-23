@@ -116,7 +116,7 @@ export default async function ChatPage({
   const partnerInitial = (chatPartner.name || "U").slice(0, 1).toUpperCase();
 
   return (
-    <div className="flex flex-1 flex-col gap-6">
+    <div className="flex flex-1 flex-col gap-6 mt-20">
       <div className="sticky top-0 z-30 -mx-3 sm:mx-0">
         <div className="rounded-3xl border border-white/60 bg-white/95 px-6 py-5 shadow-xl backdrop-blur supports-[backdrop-filter]:backdrop-blur-md sm:px-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -133,10 +133,6 @@ export default async function ChatPage({
                   <h1 className="text-xl font-semibold text-slate-900 sm:text-2xl">
                     {chatPartner.name}
                   </h1>
-                  <span className="flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-600">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                    Available to chat
-                  </span>
                 </div>
                 {chatPartner.headline && (
                   <p className="text-sm text-slate-500">
@@ -161,16 +157,13 @@ export default async function ChatPage({
                 className="rounded-full bg-blue-600 px-5 font-semibold text-white transition hover:bg-blue-700"
                 asChild
               >
-                <Link href="/connects">
-                  Manage connections
-                </Link>
+                <Link href="/connects">Manage connections</Link>
               </Button>
             </div>
           </div>
         </div>
       </div>
-
-      <div className="flex min-h-[60vh] flex-1 rounded-3xl border border-white/60 bg-gradient-to-br from-slate-50 via-white to-slate-100 p-3 shadow-lg sm:p-6">
+      <div className="flex max-h-[70vh] w-full flex-1 rounded-3xl border border-white/60 bg-gradient-to-br from-slate-50 via-white to-slate-100 p-3 shadow-lg sm:p-6">
         <MessagingInterface chatId={chatid} chatPartner={friendId} />
       </div>
     </div>

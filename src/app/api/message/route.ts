@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
+import { performance } from "perf_hooks";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import prisma from "@/lib/prisma";
+
+async function traceQuery<T>(label: string, fn: () => Promise<T>): Promise<T> {
+  const start = performance.now();
+  try {
+    return await fn();
+  } finally {
+    const duration = performance.now() - start;
+    console.log(`[DB] ${label} ${duration.toFixed(1)}ms`);
+  }
+}
 
 // GET /api/message/thread?userId=...
 export async function GET(req: NextRequest) {
@@ -10,7 +21,9 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const userId = searchParams.get("userId");
   if (!userId) return NextResponse.json({ error: "userId is required" }, { status: 400 });
-  const user = await prisma.user.findUnique({ where: { email: session.user.email } });
+  const user = await traceQuery("message:getUserByEmail", () =>
+    prisma.user.findUnique({ where: { email: session.user.email } }),
+  );
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
   const messages = await prisma.message.findMany({
     where: {
@@ -44,18 +57,22 @@ export async function POST(req: NextRequest) {
 
   // Verify that the users are connected, unless exceptions apply
   const isEmployerRole = user.role === 'EMPLOYER' || user.role === 'RECRUITER' || user.role === 'ADMIN'
-  const recipient = await prisma.user.findUnique({ where: { id: chatPartner }, select: { id: true, role: true } })
+  const recipient = await traceQuery("message:getRecipient", () =>
+    prisma.user.findUnique({ where: { id: chatPartner }, select: { id: true, role: true } }),
+  )
   const isRecipientEmployer = recipient ? (recipient.role === 'EMPLOYER' || recipient.role === 'RECRUITER' || recipient.role === 'ADMIN') : false
 
   if (!isEmployerRole) {
-    const connection = await prisma.connection.findFirst({
-      where: {
-        OR: [
-          { senderId: user.id, receiverId: chatPartner, status: 'ACCEPTED' },
-          { senderId: chatPartner, receiverId: user.id, status: 'ACCEPTED' }
-        ]
-      }
-    });
+    const connection = await traceQuery("message:getConnection", () =>
+      prisma.connection.findFirst({
+        where: {
+          OR: [
+            { senderId: user.id, receiverId: chatPartner, status: 'ACCEPTED' },
+            { senderId: chatPartner, receiverId: user.id, status: 'ACCEPTED' }
+          ]
+        }
+      }),
+    );
     if (!connection) {
       // Allow sending to employer/recruiter as a message request
       if (!isRecipientEmployer) {
@@ -82,86 +99,98 @@ export async function POST(req: NextRequest) {
       messageData.replyTo = replyTo;
     }
 
-    const message = await prisma.message.create({
-      data: messageData,
-      include: {
-        sender: {
-          select: {
-            id: true,
-            name: true,
-            image: true,
-          }
-        },
-        attachments: true,
-        reactions: true,
-      }
-    });
+    const message = await traceQuery("message:createMessage", () =>
+      prisma.message.create({
+        data: messageData,
+        include: {
+          sender: {
+            select: {
+              id: true,
+              name: true,
+              image: true,
+            }
+          },
+          attachments: true,
+          reactions: true,
+        }
+      }),
+    );
 
     // If sender is not employer and recipient is employer and not connected, ensure a PENDING message request exists
     if (!isEmployerRole && isRecipientEmployer) {
       try {
-        const repliedBefore = await prisma.message.findFirst({
-          where: { senderId: chatPartner, recipientId: user.id },
-          select: { id: true }
-        })
-        await (prisma as any).messageRequest.upsert({
-          where: { senderId_recipientId: { senderId: user.id, recipientId: chatPartner } },
-          create: {
-            senderId: user.id,
-            recipientId: chatPartner,
-            status: repliedBefore ? 'ACCEPTED' : 'PENDING'
-          },
-          update: {
-            status: repliedBefore ? 'ACCEPTED' : 'PENDING'
-          }
-        })
+        const repliedBefore = await traceQuery("message:checkRecipientReply", () =>
+          prisma.message.findFirst({
+            where: { senderId: chatPartner, recipientId: user.id },
+            select: { id: true }
+          }),
+        )
+        await traceQuery("message:upsertMessageRequest", () =>
+          (prisma as any).messageRequest.upsert({
+            where: { senderId_recipientId: { senderId: user.id, recipientId: chatPartner } },
+            create: {
+              senderId: user.id,
+              recipientId: chatPartner,
+              status: repliedBefore ? 'ACCEPTED' : 'PENDING'
+            },
+            update: {
+              status: repliedBefore ? 'ACCEPTED' : 'PENDING'
+            }
+          }),
+        )
       } catch {}
     }
 
     // If sender is employer, accept any existing pending message request from the recipient
     if (isEmployerRole) {
       try {
-        await (prisma as any).messageRequest.updateMany({
-          where: { senderId: chatPartner, recipientId: user.id, status: 'PENDING' },
-          data: { status: 'ACCEPTED' }
-        })
+        await traceQuery("message:autoAcceptMessageRequests", () =>
+          (prisma as any).messageRequest.updateMany({
+            where: { senderId: chatPartner, recipientId: user.id, status: 'PENDING' },
+            data: { status: 'ACCEPTED' }
+          }),
+        )
       } catch {}
     }
 
     // Add attachments if provided
     if (attachments && attachments.length > 0) {
       for (const attachment of attachments) {
-        await prisma.messageAttachment.create({
-          data: {
-            messageId: message.id,
-            uploadedById: user.id,
-            type: attachment.type,
-            url: attachment.url,
-            filename: attachment.filename,
-            size: attachment.size,
-            mimeType: attachment.mimeType,
-            thumbnail: attachment.thumbnail,
-            duration: attachment.duration,
-          }
-        });
+        await traceQuery("message:createAttachment", () =>
+          prisma.messageAttachment.create({
+            data: {
+              messageId: message.id,
+              uploadedById: user.id,
+              type: attachment.type,
+              url: attachment.url,
+              filename: attachment.filename,
+              size: attachment.size,
+              mimeType: attachment.mimeType,
+              thumbnail: attachment.thumbnail,
+              duration: attachment.duration,
+            }
+          }),
+        );
       }
     }
 
     // Fetch the complete message with attachments
-    const completeMessage = await prisma.message.findUnique({
-      where: { id: message.id },
-      include: {
-        sender: {
-          select: {
-            id: true,
-            name: true,
-            image: true,
-          }
-        },
-        attachments: true,
-        reactions: true,
-      }
-    });
+    const completeMessage = await traceQuery("message:getCompleteMessage", () =>
+      prisma.message.findUnique({
+        where: { id: message.id },
+        include: {
+          sender: {
+            select: {
+              id: true,
+              name: true,
+              image: true,
+            }
+          },
+          attachments: true,
+          reactions: true,
+        }
+      }),
+    );
 
     return NextResponse.json({
       id: completeMessage!.id,

@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
+import { performance } from "perf_hooks";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import prisma from "@/lib/prisma";
+
+async function traceQuery<T>(label: string, fn: () => Promise<T>): Promise<T> {
+  const start = performance.now();
+  try {
+    return await fn();
+  } finally {
+    console.log(`[DB] ${label} ${(performance.now() - start).toFixed(1)}ms`);
+  }
+}
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -9,7 +19,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const user = await prisma.user.findUnique({ where: { email: session.user.email } });
+  const user = await traceQuery("message:getUserByEmail", () =>
+    prisma.user.findUnique({ where: { email: session.user.email } }),
+  );
   if (!user) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
@@ -24,14 +36,16 @@ export async function POST(req: NextRequest) {
   }
 
   // Verify that the users are connected
-  const connection = await prisma.connection.findFirst({
-    where: {
-      OR: [
-        { senderId: user.id, receiverId: chatPartner, status: 'ACCEPTED' },
-        { senderId: chatPartner, receiverId: user.id, status: 'ACCEPTED' }
-      ]
-    }
-  });
+  const connection = await traceQuery("message:getConnection", () =>
+    prisma.connection.findFirst({
+      where: {
+        OR: [
+          { senderId: user.id, receiverId: chatPartner, status: 'ACCEPTED' },
+          { senderId: chatPartner, receiverId: user.id, status: 'ACCEPTED' }
+        ]
+      }
+    }),
+  );
 
   if (!connection) {
     return NextResponse.json({ error: "Users must be connected to view messages" }, { status: 403 });
@@ -52,40 +66,42 @@ export async function POST(req: NextRequest) {
       : (whereBase as any)
 
     // Fetch one extra to compute hasMore
-    const results = await prisma.message.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      take: limit + 1,
-      select: {
-        id: true,
-        createdAt: true,
-        recipientId: true,
-        senderId: true,
-        text: true,
-        replyTo: true,
-        isEdited: true,
-        editedAt: true,
-        sender: {
-          select: { id: true, name: true, email: true },
-        },
-        recipient: {
-          select: { id: true, name: true, email: true },
-        },
-        readAt: true,
-        readBy: true,
-        attachments: {
-          select: {
-            id: true, type: true, url: true, filename: true, size: true, mimeType: true, thumbnail: true, duration: true,
+    const results = await traceQuery("message:fetchThread", () =>
+      prisma.message.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: limit + 1,
+        select: {
+          id: true,
+          createdAt: true,
+          recipientId: true,
+          senderId: true,
+          text: true,
+          replyTo: true,
+          isEdited: true,
+          editedAt: true,
+          sender: {
+            select: { id: true, name: true, email: true },
+          },
+          recipient: {
+            select: { id: true, name: true, email: true },
+          },
+          readAt: true,
+          readBy: true,
+          attachments: {
+            select: {
+              id: true, type: true, url: true, filename: true, size: true, mimeType: true, thumbnail: true, duration: true,
+            },
+          },
+          reactions: {
+            select: {
+              id: true, emoji: true, userId: true, createdAt: true,
+              user: { select: { id: true, name: true } },
+            },
           },
         },
-        reactions: {
-          select: {
-            id: true, emoji: true, userId: true, createdAt: true,
-            user: { select: { id: true, name: true } },
-          },
-        },
-      },
-    })
+      }),
+    )
 
     const hasMore = results.length > limit
     const slice = hasMore ? results.slice(0, limit) : results
