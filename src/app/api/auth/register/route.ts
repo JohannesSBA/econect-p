@@ -1,11 +1,28 @@
 // /app/api/auth/register/route.ts
 import { NextResponse } from 'next/server'
+import { createHmac } from 'crypto'
 import prisma from '@/lib/prisma'
 import { Resend } from 'resend'
+import { rateLimit } from '@/lib/rateLimiter'
 
 export async function POST(req: Request) {
-  console.log('register')
+  const nextReq = req as any
+  const limitResult = rateLimit(nextReq, 'auth:register', 5, 10 * 60 * 1000)
+  if (!limitResult.allowed) {
+    return NextResponse.json(
+      { error: `Too many attempts. Try again in ${limitResult.retryAfterSeconds}s.` },
+      {
+        status: 429,
+        headers: { 'Retry-After': String(limitResult.retryAfterSeconds) },
+      },
+    )
+  }
+
   const { email, phone } = await req.json()
+
+  if (!email || !phone) {
+    return NextResponse.json({ error: 'Email and phone are required' }, { status: 400 })
+  }
 
   // 1) Prevent duplicates
   const [byEmail, byPhone] = await Promise.all([
@@ -21,8 +38,14 @@ export async function POST(req: Request) {
 
   // 3) Pack & encrypt payload into a cookie
   const payload = Buffer.from(JSON.stringify({ email, otp, expires: expiresAt })).toString('base64')
+  const otpSecret = process.env.OTP_SECRET || process.env.NEXTAUTH_SECRET
+  if (!otpSecret) {
+    return NextResponse.json({ error: 'Server misconfiguration' }, { status: 500 })
+  }
+  const signature = createHmac('sha256', otpSecret).update(payload).digest('hex')
+  const token = `${payload}.${signature}`
   const expiresDate = new Date(expiresAt).toUTCString()
-  const cookie = `econnect_otp=${payload}; Path=/; Expires=${expiresDate}; HttpOnly; Secure; SameSite=Strict`
+  const cookie = `econnect_otp=${token}; Path=/; Expires=${expiresDate}; HttpOnly; Secure; SameSite=Strict`
 
   // 4) Send email via Resend
   const resend = new Resend(process.env.RESEND_KEY!)

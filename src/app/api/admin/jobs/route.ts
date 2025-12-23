@@ -1,30 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
 
-import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import prisma from "@/lib/prisma";
 import { JobStatus, Prisma } from "@/generated/prisma";
+import { requireAdminUser } from "@/lib/adminAuth";
 
 const DEFAULT_PAGE_SIZE = 10;
 
-async function requireAdmin() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    throw NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  const me = await prisma.user.findUnique({
-    where: { email: session.user.email },
-    select: { id: true, role: true, email: true },
-  });
-  if (!me || me.role !== "ADMIN") {
-    throw NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-  return me;
-}
-
 export async function GET(req: NextRequest) {
   try {
-    await requireAdmin();
+    await requireAdminUser();
   } catch (response) {
     if (response instanceof NextResponse) return response;
     throw response;
@@ -76,14 +60,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const admin = await (async () => {
-    try {
-      return await requireAdmin();
-    } catch (response) {
-      if (response instanceof NextResponse) return response;
-      throw response;
-    }
-  })();
+  const admin = await requireAdminUser();
   if (admin instanceof NextResponse) return admin;
 
   try {
@@ -172,7 +149,7 @@ export async function PATCH(req: NextRequest) {
         action: `JOB_${action.toUpperCase()}`,
         targetType: "job",
         targetId: id,
-        details: reason ? { reason } : null,
+        details: reason ? JSON.stringify({ reason }) : undefined,
       })),
     });
 

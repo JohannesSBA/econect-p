@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
   const userId = searchParams.get("userId");
   if (!userId) return NextResponse.json({ error: "userId is required" }, { status: 400 });
   const user = await traceQuery("message:getUserByEmail", () =>
-    prisma.user.findUnique({ where: { email: session.user.email } }),
+    prisma.user.findUnique({ where: { email: session.user.email ?? undefined } }),
   );
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
   const messages = await prisma.message.findMany({

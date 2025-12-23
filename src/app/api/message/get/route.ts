@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
   }
 
   const user = await traceQuery("message:getUserByEmail", () =>
-    prisma.user.findUnique({ where: { email: session.user.email } }),
+    prisma.user.findUnique({ where: { email: session.user.email ?? undefined } }),
   );
   if (!user) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });

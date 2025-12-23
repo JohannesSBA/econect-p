@@ -74,6 +74,7 @@ A full-stack professional networking platform tailored for Ethiopia. Econnect sh
    npx prisma generate
    npx prisma migrate dev --name init
    ```
+   Prisma 7 reads the connection URL from `prisma.config.ts`; ensure `DATABASE_URL` is set before running CLI commands.
 5. **Seed baseline data (admin, demo users, sample jobs)**
    ```bash
    npm run seed
@@ -189,6 +190,18 @@ npm run lint
 npm test
 npm run test:e2e
 ```
+
+## Conventions & Patterns
+- **Path alias**: Use `@/` to import from `src/...` (configured in `tsconfig.json` and `vitest.config.ts`).
+- **Validation**: Prefer Zod schemas (see `src/lib/jobValidation.ts`) for API payloads; return 400 with clear messages.
+- **Auth/roles**: Use shared guards (`src/lib/adminAuth.ts`) instead of ad-hoc role checks in API routes.
+- **Rate limiting**: `src/lib/rateLimiter.ts` guards auth endpoints; move to Redis for multi-instance deployments (see TODO).
+- **Error handling**: Keep API responses consistent (`{ error: string }` with appropriate HTTP status).
+- **Logging**: Avoid noisy `console.log` in request handlers; rely on structured logs where needed.
+- **Prisma config**: `prisma.config.ts` holds the datasource URL; `PrismaClient` is instantiated with `datasourceUrl` in `src/lib/prisma.ts`.
+
+## TODO
+- Move rate limiting to a shared store (e.g., Redis/Upstash) for multi-instance deployments and stronger abuse protection.
 
 ---
 

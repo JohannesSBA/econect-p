@@ -1,28 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
 
-import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import prisma from "@/lib/prisma";
 import { Prisma, UserRole } from "@/generated/prisma";
-
-async function requireAdmin() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    throw NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  const currentUser = await prisma.user.findUnique({
-    where: { email: session.user.email },
-    select: { id: true, role: true },
-  });
-  if (!currentUser || currentUser.role !== "ADMIN") {
-    throw NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-  return currentUser;
-}
+import { requireAdminUser } from "@/lib/adminAuth";
 
 export async function GET(req: NextRequest) {
   try {
-    await requireAdmin();
+    await requireAdminUser();
   } catch (response) {
     if (response instanceof NextResponse) {
       return response;
@@ -122,7 +106,7 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    await requireAdmin();
+    await requireAdminUser();
   } catch (response) {
     if (response instanceof NextResponse) {
       return response;

@@ -1,4 +1,16 @@
+/**
+ * Development seed data:
+ * - Admins + verified/unverified employers (with audit logs for verification)
+ * - Mixed job states (approved/published, under-review, rejected)
+ * - Job seekers with profiles, posts, connections, applications against OPEN jobs
+ */
 import { PrismaClient } from '../src/generated/prisma'
+
+const datasourceUrl = process.env.DATABASE_URL
+if (!datasourceUrl) {
+  throw new Error('DATABASE_URL is not set')
+}
+
 const prisma = new PrismaClient()
 
 const SKILL_NAMES = [
@@ -308,7 +320,12 @@ async function main() {
   }
 
   if (auditLogs.length > 0) {
-    await prisma.adminAuditLog.createMany({ data: auditLogs })
+    await prisma.adminAuditLog.createMany({
+      data: auditLogs.map((log) => ({
+        ...log,
+        details: log.details ? JSON.stringify(log.details) : undefined,
+      })),
+    })
   }
 
   // Create job applications against published jobs when available

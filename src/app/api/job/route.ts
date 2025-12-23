@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/options";
+
 import prisma from "@/lib/prisma";
+import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { publishedJobWhere } from "@/lib/jobFilters";
-import { JobStatus } from "@/generated/prisma";
+import { JobStatus, UserRole } from "@/generated/prisma";
+import { parseJobInput } from "@/lib/jobValidation";
 
 // GET /api/job
 export async function GET(req: NextRequest) {
@@ -31,15 +33,20 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = await prisma.user.findUnique({ where: { email: session.user.email } });
   if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  // For employers, enforce paywall flow via /api/employer/jobs + Chapa checkout
-  if (user.role === 'EMPLOYER') {
-    return NextResponse.json({ error: "Employers must use /api/employer/jobs and complete payment to publish." }, { status: 403 });
+  // Only admins/recruiters can create directly; employers must use /api/employer/jobs
+  if (user.role !== UserRole.ADMIN && user.role !== UserRole.RECRUITER) {
+    return NextResponse.json({ error: "Only admins or recruiters can post here" }, { status: 403 });
   }
-  // Allow admins and recruiters to create directly (backoffice use)
-  const data = await req.json();
+  let parsed;
+  try {
+    parsed = parseJobInput(await req.json());
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Invalid payload";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
   const job = await prisma.jobListing.create({
     data: {
-      ...data,
+      ...parsed,
       employerId: user.id,
       status: JobStatus.UNDER_REVIEW,
       isPublished: false,
