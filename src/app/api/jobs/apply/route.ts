@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { getCurrentUser } from "@/lib/getCurrentUser"
+import { publishedJobWhere } from "@/lib/jobFilters"
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,13 +21,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "Missing required fields" }, { status: 400 })
     }
 
-    // Check if job exists
-    const job = await prisma.jobListing.findUnique({
-      where: { id: jobId }
+    // Check if job exists and is publishable
+    const job = await prisma.jobListing.findFirst({
+      where: { id: jobId, ...publishedJobWhere },
     })
 
     if (!job) {
-      return NextResponse.json({ message: "Job not found" }, { status: 404 })
+      return NextResponse.json({ message: "Job not found or not open" }, { status: 404 })
     }
 
     // Check if user has already applied

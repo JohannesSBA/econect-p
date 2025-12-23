@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import prisma from "@/lib/prisma";
+import { publishedJobWhere } from "@/lib/jobFilters";
+import { JobStatus } from "@/generated/prisma";
 
 // GET /api/job
 export async function GET(req: NextRequest) {
@@ -9,6 +11,7 @@ export async function GET(req: NextRequest) {
   const q = searchParams.get("q") || "";
   const jobs = await prisma.jobListing.findMany({
     where: {
+      ...publishedJobWhere,
       OR: [
         { title: { contains: q, mode: "insensitive" } },
         { company: { contains: q, mode: "insensitive" } },
@@ -38,7 +41,10 @@ export async function POST(req: NextRequest) {
     data: {
       ...data,
       employerId: user.id,
+      status: JobStatus.UNDER_REVIEW,
+      isPublished: false,
+      publishedAt: null,
     },
   });
   return NextResponse.json(job);
-} 
+}

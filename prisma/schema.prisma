@@ -114,8 +114,11 @@ model User {
 
   // Relations
   jobListings  JobListing[]      @relation("EmployerJobs")
+  reviewedJobs JobListing[]      @relation("JobReviewedBy")
   profile      JobSeekerProfile? @relation("SeekerProfile")
   applications JobApplication[]  @relation("UserApplications")
+  reviewedEmployers EmployerProfile[] @relation("EmployerProfileReviewer")
+  auditLogs   AdminAuditLog[]    @relation("AuditActor")
 
   // Posts
   posts Post[]
@@ -386,15 +389,20 @@ model JobListing {
   isPublished Boolean   @default(true)
   publishedAt DateTime? @default(now())
   isFeatured  Boolean   @default(false)
+  reviewedAt  DateTime?
+  reviewedById String?
+  reviewNote  String?
 
   // Relations
   employerId   String
   employer     User             @relation("EmployerJobs", fields: [employerId], references: [id])
+  reviewedBy   User?            @relation("JobReviewedBy", fields: [reviewedById], references: [id])
   applications JobApplication[] @relation("JobApplications")
   bookmarks    JobBookmark[]
   payments     Payment[]
 
   @@index([location, createdAt])
+  @@index([reviewedById])
 }
 
 model JobSeekerProfile {
@@ -623,6 +631,10 @@ model EmployerProfile {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   isVerified  Boolean  @default(false)
+  verifiedAt  DateTime?
+  verifiedById String?
+  verificationNote String?
+  verifiedBy  User?    @relation("EmployerProfileReviewer", fields: [verifiedById], references: [id])
 }
 
 model Payment {
@@ -644,4 +656,18 @@ model Payment {
   job        JobListing? @relation(fields: [jobId], references: [id])
 
   @@unique([jobId])
+}
+
+model AdminAuditLog {
+  id         String   @id @default(cuid())
+  actorId    String
+  actor      User     @relation("AuditActor", fields: [actorId], references: [id], onDelete: Cascade)
+  action     String
+  targetType String
+  targetId   String
+  details    Json?
+  createdAt  DateTime @default(now())
+
+  @@index([actorId])
+  @@index([targetType, targetId])
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { getCurrentUser } from "@/lib/getCurrentUser"
+import { publishedJobWhere } from "@/lib/jobFilters"
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,8 +17,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if job exists
-    const job = await prisma.jobListing.findUnique({
-      where: { id: jobId }
+    const job = await prisma.jobListing.findFirst({
+      where: { id: jobId, ...publishedJobWhere }
     })
 
     if (!job) {

@@ -21,10 +21,7 @@ export async function POST(req: NextRequest) {
   const devConfirm = process.env.CHAPA_DEV_CONFIRM === 'true';
   if (devConfirm) {
     await prisma.payment.update({ where: { id: payment.id }, data: { status: 'PAID' } });
-    if (payment.jobId) {
-      await prisma.jobListing.update({ where: { id: payment.jobId }, data: { isPublished: true, status: 'OPEN', publishedAt: new Date() } })
-    }
-    return NextResponse.json({ ok: true, published: !!payment.jobId, jobId: payment.jobId, mode: 'dev' });
+    return NextResponse.json({ ok: true, published: false, jobId: payment.jobId, mode: 'dev' });
   }
 
   const secretKey = process.env.CHAPA_SECRET_KEY || process.env.TEST_SECRET_KEY;
@@ -65,9 +62,5 @@ export async function POST(req: NextRequest) {
     }
   });
 
-  if (payment.jobId) {
-    await prisma.jobListing.update({ where: { id: payment.jobId }, data: { isPublished: true, status: 'OPEN', publishedAt: new Date() } })
-  }
-
-  return NextResponse.json({ ok: true, published: !!payment.jobId, jobId: payment.jobId, mode: 'verify' });
+  return NextResponse.json({ ok: true, published: false, jobId: payment.jobId, mode: 'verify' });
 }

@@ -38,16 +38,12 @@ export async function POST(req: NextRequest) {
         metadata: { jobId, discountCode },
       }
     });
-    // Immediately publish the job
-    await prisma.jobListing.update({
-      where: { id: jobId },
-      data: { isPublished: true, status: 'OPEN', publishedAt: new Date() },
-    })
     return NextResponse.json({
       discountApplied: true,
       paymentId: payment.id,
-      published: true,
+      published: false,
       redirect_url: '/employer/jobs/active',
+      message: 'Payment recorded. Listing will be published after admin review.',
     })
   }
 

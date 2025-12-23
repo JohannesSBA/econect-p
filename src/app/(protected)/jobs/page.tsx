@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/getCurrentUser";
 import { User } from "@/../types/prisma";
 import prisma from "@/lib/prisma";
 import JobsPageClient from "./components/JobsPageClient";
+import { publishedJobWhere } from "@/lib/jobFilters";
 
 export default async function JobsPage() {
   const user = (await getCurrentUser()) as unknown as User;
@@ -31,15 +32,7 @@ export default async function JobsPage() {
 
   // Fetch job listings with employer information and bookmarks
   const jobListings = await prisma.jobListing.findMany({
-    where: {
-      isPublished: true,
-      status: 'OPEN',
-      payments: {
-        some: {
-          status: 'PAID',
-        },
-      },
-    },
+    where: publishedJobWhere,
     include: {
       employer: {
         select: {

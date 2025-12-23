@@ -40,6 +40,7 @@ type ModeratedUser = {
 
 interface AdminUserTableProps {
   initialUsers: ModeratedUser[];
+  initialTotal: number;
 }
 
 const roleOptions = [
@@ -52,13 +53,24 @@ const roleOptions = [
   "STUDENT",
 ] as const;
 
-export function AdminUserTable({ initialUsers }: AdminUserTableProps) {
+const PAGE_SIZE = 15;
+
+export function AdminUserTable({
+  initialUsers,
+  initialTotal,
+}: AdminUserTableProps) {
   const [users, setUsers] = useState(initialUsers);
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [loading, setLoading] = useState(false);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(initialTotal || initialUsers.length);
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const rangeStart =
+    total === 0 ? 0 : Math.min((page - 1) * PAGE_SIZE + 1, total);
+  const rangeEnd = total === 0 ? 0 : Math.min(page * PAGE_SIZE, total);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -69,11 +81,16 @@ export function AdminUserTable({ initialUsers }: AdminUserTableProps) {
         if (query) params.set("q", query);
         if (roleFilter !== "all") params.set("role", roleFilter);
         if (statusFilter !== "all") params.set("status", statusFilter);
+        params.set("page", String(page));
+        params.set("pageSize", String(PAGE_SIZE));
         const res = await fetch(`/api/admin/users?${params.toString()}`, {
           signal: controller.signal,
         });
         if (!res.ok) throw new Error("Failed to load users");
-        const data = (await res.json()) as { users: ModeratedUser[] };
+        const data = (await res.json()) as {
+          users: ModeratedUser[];
+          total?: number;
+        };
         setUsers(
           data.users.map((user) => ({
             ...user,
@@ -83,6 +100,9 @@ export function AdminUserTable({ initialUsers }: AdminUserTableProps) {
               : null,
           })),
         );
+        if (typeof data.total === "number") {
+          setTotal(data.total);
+        }
       } catch (error) {
         if (!(error instanceof DOMException && error.name === "AbortError")) {
           console.error(error);
@@ -96,7 +116,7 @@ export function AdminUserTable({ initialUsers }: AdminUserTableProps) {
       controller.abort();
       clearTimeout(timer);
     };
-  }, [query, roleFilter, statusFilter]);
+  }, [query, roleFilter, statusFilter, page]);
 
   const handleAction = async (
     userId: string,
@@ -180,9 +200,18 @@ export function AdminUserTable({ initialUsers }: AdminUserTableProps) {
           <Input
             placeholder="Search by name, email, phone, city…"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setPage(1);
+            }}
           />
-          <Select value={roleFilter} onValueChange={setRoleFilter}>
+          <Select
+            value={roleFilter}
+            onValueChange={(value) => {
+              setRoleFilter(value);
+              setPage(1);
+            }}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Role" />
             </SelectTrigger>
@@ -195,7 +224,13 @@ export function AdminUserTable({ initialUsers }: AdminUserTableProps) {
               ))}
             </SelectContent>
           </Select>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select
+            value={statusFilter}
+            onValueChange={(value) => {
+              setStatusFilter(value);
+              setPage(1);
+            }}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Status" />
             </SelectTrigger>
@@ -375,6 +410,33 @@ export function AdminUserTable({ initialUsers }: AdminUserTableProps) {
               ))}
             </tbody>
           </table>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3 px-1 text-xs text-slate-500">
+          <span>
+            Showing {rangeStart}-{rangeEnd} of {total}
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8"
+              disabled={page <= 1 || loading}
+              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+            >
+              Prev
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8"
+              disabled={page >= totalPages || loading}
+              onClick={() =>
+                setPage((prev) => Math.min(totalPages, prev + 1))
+              }
+            >
+              Next
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>

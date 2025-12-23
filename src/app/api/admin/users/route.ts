@@ -34,10 +34,16 @@ export async function GET(req: NextRequest) {
   const query = searchParams.get("q")?.trim() ?? "";
   const role = searchParams.get("role") ?? undefined;
   const status = searchParams.get("status") ?? undefined;
-  const take = Math.min(
+  const pageSize = Math.min(
     100,
-    Math.max(1, Number(searchParams.get("limit") ?? 25)),
+    Math.max(
+      1,
+      Number(
+        searchParams.get("pageSize") ?? searchParams.get("limit") ?? 25,
+      ),
+    ),
   );
+  const page = Math.max(1, Number(searchParams.get("page") ?? 1));
 
   const filters: Prisma.UserWhereInput[] = [];
   if (query) {
@@ -59,10 +65,14 @@ export async function GET(req: NextRequest) {
     filters.push({ shadowBanned: true });
   }
 
+  const where = filters.length ? { AND: filters } : {};
+
+  const total = await prisma.user.count({ where });
   const result = await prisma.user.findMany({
-    where: filters.length ? { AND: filters } : {},
+    where,
     orderBy: { createdAt: "desc" },
-    take,
+    take: pageSize,
+    skip: (page - 1) * pageSize,
     select: {
       id: true,
       name: true,
@@ -109,7 +119,7 @@ export async function GET(req: NextRequest) {
     },
   }));
 
-  return NextResponse.json({ users });
+  return NextResponse.json({ users, total, page, pageSize });
 }
 
 export async function PATCH(req: NextRequest) {

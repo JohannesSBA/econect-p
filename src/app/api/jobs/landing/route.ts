@@ -1,15 +1,9 @@
-
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { publishedJobWhere } from "@/lib/jobFilters";
 
 const paidListingFilter = {
-  isPublished: true,
-  status: 'OPEN' as const,
-  payments: {
-    some: {
-      status: 'PAID' as const,
-    },
-  },
+  ...publishedJobWhere,
 };
 
 export async function GET(request: Request) {

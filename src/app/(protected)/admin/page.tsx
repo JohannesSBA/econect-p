@@ -196,6 +196,7 @@ export default async function AdminDashboardPage() {
       orderBy: { createdAt: "desc" },
       include: {
         employer: { select: { id: true, name: true, email: true } },
+        reviewedBy: { select: { id: true, name: true, email: true } },
       },
     }),
     prisma.employerProfile.findMany({
@@ -203,6 +204,7 @@ export default async function AdminDashboardPage() {
       orderBy: { createdAt: "desc" },
       include: {
         user: { select: { id: true, name: true, email: true } },
+        verifiedBy: { select: { id: true, name: true, email: true } },
       },
     }),
   ]);
@@ -273,6 +275,10 @@ export default async function AdminDashboardPage() {
     createdAt: job.createdAt.toISOString(),
     isFeatured: job.isFeatured,
     employer: job.employer,
+    status: job.status,
+    reviewNote: job.reviewNote,
+    reviewedAt: job.reviewedAt ? job.reviewedAt.toISOString() : null,
+    reviewedBy: job.reviewedBy,
   }));
 
   const pendingEmployers = unverifiedEmployersRaw.map((profile) => ({
@@ -280,6 +286,10 @@ export default async function AdminDashboardPage() {
     companyName: profile.companyName,
     isVerified: profile.isVerified,
     user: profile.user,
+    createdAt: profile.createdAt.toISOString(),
+    verificationNote: profile.verificationNote,
+    verifiedAt: profile.verifiedAt ? profile.verifiedAt.toISOString() : null,
+    verifiedBy: profile.verifiedBy,
   }));
 
   const revenue = sumPayments._sum.amount ?? 0;
@@ -457,7 +467,10 @@ export default async function AdminDashboardPage() {
 
           <section className="grid gap-6 xl:grid-cols-3">
             <div className="xl:col-span-2">
-              <AdminUserTable initialUsers={recentUsers} />
+              <AdminUserTable
+                initialUsers={recentUsers}
+                initialTotal={totalUsers}
+              />
             </div>
             <RoleDistributionCard data={roleDistribution} />
           </section>
