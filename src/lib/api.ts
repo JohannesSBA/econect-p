@@ -5,10 +5,17 @@ import { HttpError } from "@/lib/errors";
 
 // Next.js 15 route handler context — params are async
 export type RouteContext = { params: Promise<Record<string, string>> };
-type Handler = (req: NextRequest, ctx?: RouteContext) => Promise<NextResponse>;
+type InnerHandler = (req: NextRequest, ctx?: RouteContext) => Promise<NextResponse>;
 
-export function withHandler(handler: Handler): Handler {
-  return async (req, ctx?) => {
+// First overload satisfies Next.js build type checker (ctx required).
+// Second overload allows tests to call without ctx.
+interface RouteHandler {
+  (req: NextRequest, ctx: RouteContext): Promise<NextResponse>;
+  (req: NextRequest): Promise<NextResponse>;
+}
+
+export function withHandler(handler: InnerHandler): RouteHandler {
+  return (async (req: NextRequest, ctx?: RouteContext) => {
     try {
       return await handler(req, ctx);
     } catch (error) {
@@ -24,5 +31,5 @@ export function withHandler(handler: Handler): Handler {
       console.error("Unhandled route error:", error);
       return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
-  };
+  }) as RouteHandler;
 }
