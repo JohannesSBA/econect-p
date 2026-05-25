@@ -127,7 +127,7 @@ export default function NotFound() {
                 </div>
                 <h3 className="text-xl font-semibold mb-2 text-gray-900">Join Community</h3>
                 <p className="text-gray-600 mb-4">Connect with professionals and expand your network</p>
-                <Link href="/community">
+                <Link href="/grow-network">
                   <Button variant="ghost" className="text-purple-600 hover:text-purple-700">
                     Join Now <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
@@ -142,11 +142,11 @@ export default function NotFound() {
                 </div>
                 <h3 className="text-xl font-semibold mb-2 text-gray-900">Get Help</h3>
                 <p className="text-gray-600 mb-4">Need assistance? Our support team is here to help</p>
-                <Link href="/support">
+                <a href="mailto:support@econnect.et">
                   <Button variant="ghost" className="text-teal-600 hover:text-teal-700">
                     Contact Support <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
-                </Link>
+                </a>
               </CardContent>
             </Card>
           </div>
