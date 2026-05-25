@@ -5,13 +5,15 @@
  * - Job seekers with profiles, posts, connections, applications against OPEN jobs
  */
 import { PrismaClient } from '../src/generated/prisma'
+import { PrismaPg } from '@prisma/adapter-pg'
 
 const datasourceUrl = process.env.DATABASE_URL
 if (!datasourceUrl) {
   throw new Error('DATABASE_URL is not set')
 }
 
-const prisma = new PrismaClient()
+const adapter = new PrismaPg(datasourceUrl)
+const prisma = new PrismaClient({ adapter })
 
 const SKILL_NAMES = [
   'React', 'Node.js', 'TypeScript', 'Python', 'Docker', 'AWS', 'MongoDB', 'PostgreSQL',

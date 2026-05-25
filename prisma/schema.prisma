@@ -1,13 +1,10 @@
 generator client {
-  provider        = "prisma-client-js"
-  output          = "../src/generated/prisma"
-  previewFeatures = ["interactiveTransactions"]
-  seed            = "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 enum UserRole {
@@ -51,12 +48,22 @@ enum PaymentProduct {
   OTHER
 }
 
-enum degreeType {
+enum DegreeType {
   BACHELOR
   MASTER
   PHD
   DIPLOMA
   CERTIFICATE
+}
+
+enum ApplicationStatus {
+  PENDING
+  REVIEWING
+  SHORTLISTED
+  ACCEPTED
+  HIRED
+  REJECTED
+  WITHDRAWN
 }
 
 enum ConnectionStatus {
@@ -448,7 +455,7 @@ model Education {
   jobSeekerProfileId String
 
   school       String
-  degreeType   degreeType
+  degreeType   DegreeType
   fieldOfStudy String?
   grade        Float
   StartYear    Int
@@ -479,7 +486,7 @@ model JobApplication {
   userId      String
   jobId       String
   appliedAt   DateTime @default(now())
-  status      String   @default("pending") // Can be updated to enum later (e.g., PENDING, ACCEPTED, REJECTED)
+  status      ApplicationStatus @default(PENDING)
   coverLetter String? // Cover letter text
   resumeUrl   String? // Resume file URL
 

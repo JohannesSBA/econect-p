@@ -1,19 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { requireAdminUser } from "@/lib/adminAuth";
+import { withHandler } from "@/lib/api";
+import { requireAdmin } from "@/lib/auth";
+import { HttpError } from "@/lib/errors";
 import { getRequestLogger } from "@/lib/logger";
 import { listEmployers, updateEmployers } from "@/services/adminEmployers";
 
 const DEFAULT_PAGE_SIZE = 10;
 
-export async function GET(req: NextRequest) {
+export const GET = withHandler(async (req: NextRequest) => {
   const logger = getRequestLogger(req, { route: "api:admin:employers" });
-  try {
-    await requireAdminUser();
-  } catch (response) {
-    if (response instanceof NextResponse) return response;
-    throw response;
-  }
+  await requireAdmin();
 
   const { searchParams } = new URL(req.url);
   const status = searchParams.get("status") ?? "pending";
@@ -32,56 +29,33 @@ export async function GET(req: NextRequest) {
   });
 
   return NextResponse.json({ employers, page, pageSize, total });
-}
+});
 
-export async function PATCH(req: NextRequest) {
+export const PATCH = withHandler(async (req: NextRequest) => {
   const logger = getRequestLogger(req, { route: "api:admin:employers" });
-  const admin = await requireAdminUser();
-  if (admin instanceof NextResponse) return admin;
+  const admin = await requireAdmin();
 
-  try {
-    const body = await req.json();
-    const { employerProfileId, employerProfileIds, action } = body as {
-      employerProfileId?: string;
-      employerProfileIds?: string[];
-      action?: "verify" | "suspend";
-      reason?: string;
-    };
-    const reason = typeof body.reason === "string" ? body.reason.trim() : "";
-    const ids = Array.isArray(employerProfileIds)
-      ? employerProfileIds.filter(Boolean)
-      : employerProfileId
-        ? [employerProfileId]
-        : [];
+  const body = await req.json();
+  const { employerProfileId, employerProfileIds, action } = body as {
+    employerProfileId?: string;
+    employerProfileIds?: string[];
+    action?: "verify" | "suspend";
+    reason?: string;
+  };
+  const reason = typeof body.reason === "string" ? body.reason.trim() : "";
+  const ids = Array.isArray(employerProfileIds)
+    ? employerProfileIds.filter(Boolean)
+    : employerProfileId
+      ? [employerProfileId]
+      : [];
 
-    if (!ids.length || !action) {
-      return NextResponse.json(
-        { error: "employerProfileId(s) and action required" },
-        { status: 400 },
-      );
-    }
-
-    if (action === "suspend" && !reason) {
-      return NextResponse.json(
-        { error: "Suspension reason is required" },
-        { status: 400 },
-      );
-    }
-
-    const now = new Date();
-    const updates = await updateEmployers({
-      adminId: admin.id,
-      ids,
-      action,
-      reason,
-    });
-
-    return NextResponse.json({ success: true, profiles: updates });
-  } catch (error) {
-    logger.error("Unable to update employer(s)", { error });
-    return NextResponse.json(
-      { error: "Unable to update employer(s). Please try again." },
-      { status: 500 },
-    );
+  if (!ids.length || !action) {
+    throw new HttpError(400, "employerProfileId(s) and action required");
   }
-}
+  if (action === "suspend" && !reason) {
+    throw new HttpError(400, "Suspension reason is required");
+  }
+
+  const updates = await updateEmployers({ adminId: admin.id, ids, action, reason });
+  return NextResponse.json({ success: true, profiles: updates });
+});

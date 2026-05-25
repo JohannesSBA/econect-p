@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
 
-import prisma from "@/lib/prisma";
-import { authOptions } from "@/app/api/auth/[...nextauth]/options";
+import { JobStatus } from "@/generated/prisma";
+import { withHandler } from "@/lib/api";
+import { requireUser, requireRole } from "@/lib/auth";
 import { publishedJobWhere } from "@/lib/jobFilters";
-import { JobStatus, UserRole } from "@/generated/prisma";
-import { parseJobInput } from "@/lib/jobValidation";
+import { createJobSchema } from "@/lib/validation/jobs";
+import prisma from "@/lib/prisma";
 
-// GET /api/job
-export async function GET(req: NextRequest) {
+export const GET = withHandler(async (req: NextRequest) => {
   const { searchParams } = new URL(req.url);
   const q = searchParams.get("q") || "";
+
   const jobs = await prisma.jobListing.findMany({
     where: {
       ...publishedJobWhere,
@@ -24,26 +24,16 @@ export async function GET(req: NextRequest) {
     orderBy: { createdAt: "desc" },
     take: 20,
   });
-  return NextResponse.json(jobs);
-}
 
-// POST /api/job
-export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const user = await prisma.user.findUnique({ where: { email: session.user.email } });
-  if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  // Only admins/recruiters can create directly; employers must use /api/employer/jobs
-  if (user.role !== UserRole.ADMIN && user.role !== UserRole.RECRUITER) {
-    return NextResponse.json({ error: "Only admins or recruiters can post here" }, { status: 403 });
-  }
-  let parsed;
-  try {
-    parsed = parseJobInput(await req.json());
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Invalid payload";
-    return NextResponse.json({ error: message }, { status: 400 });
-  }
+  return NextResponse.json(jobs);
+});
+
+export const POST = withHandler(async (req: NextRequest) => {
+  const user = await requireUser();
+  requireRole(user, "ADMIN", "RECRUITER");
+
+  const parsed = createJobSchema.parse(await req.json());
+
   const job = await prisma.jobListing.create({
     data: {
       ...parsed,
@@ -53,5 +43,6 @@ export async function POST(req: NextRequest) {
       publishedAt: null,
     },
   });
+
   return NextResponse.json(job);
-}
+});

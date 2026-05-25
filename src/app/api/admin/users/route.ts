@@ -1,18 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import prisma from "@/lib/prisma";
 import { Prisma, UserRole } from "@/generated/prisma";
-import { requireAdminUser } from "@/lib/adminAuth";
+import { withHandler } from "@/lib/api";
+import { requireAdmin } from "@/lib/auth";
+import { HttpError } from "@/lib/errors";
+import prisma from "@/lib/prisma";
+import { adminUserActionSchema } from "@/lib/validation/users";
 
-export async function GET(req: NextRequest) {
-  try {
-    await requireAdminUser();
-  } catch (response) {
-    if (response instanceof NextResponse) {
-      return response;
-    }
-    throw response;
-  }
+export const GET = withHandler(async (req: NextRequest) => {
+  await requireAdmin();
 
   const { searchParams } = new URL(req.url);
   const query = searchParams.get("q")?.trim() ?? "";
@@ -20,10 +16,7 @@ export async function GET(req: NextRequest) {
   const status = searchParams.get("status") ?? undefined;
   const pageSize = Math.min(
     100,
-    Math.max(
-      1,
-      Number(searchParams.get("pageSize") ?? searchParams.get("limit") ?? 25),
-    ),
+    Math.max(1, Number(searchParams.get("pageSize") ?? searchParams.get("limit") ?? 25)),
   );
   const page = Math.max(1, Number(searchParams.get("page") ?? 1));
 
@@ -38,100 +31,65 @@ export async function GET(req: NextRequest) {
       ],
     });
   }
-  if (role && role in UserRole) {
-    filters.push({ role: role as UserRole });
-  }
-  if (status === "suspended") {
-    filters.push({ isSuspended: true });
-  } else if (status === "shadow") {
-    filters.push({ shadowBanned: true });
-  }
+  if (role && role in UserRole) filters.push({ role: role as UserRole });
+  if (status === "suspended") filters.push({ isSuspended: true });
+  else if (status === "shadow") filters.push({ shadowBanned: true });
 
   const where = filters.length ? { AND: filters } : {};
-
-  const total = await prisma.user.count({ where });
-  const result = await prisma.user.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-    take: pageSize,
-    skip: (page - 1) * pageSize,
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      phone: true,
-      role: true,
-      location: true,
-      createdAt: true,
-      isSuspended: true,
-      suspendedAt: true,
-      shadowBanned: true,
-      employerProfile: {
-        select: {
-          isVerified: true,
-          companyName: true,
-        },
+  const [total, result] = await Promise.all([
+    prisma.user.count({ where }),
+    prisma.user.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: pageSize,
+      skip: (page - 1) * pageSize,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        location: true,
+        createdAt: true,
+        isSuspended: true,
+        suspendedAt: true,
+        shadowBanned: true,
+        employerProfile: { select: { isVerified: true, companyName: true } },
+        _count: { select: { posts: true, comments: true, jobListings: true } },
       },
-      _count: {
-        select: {
-          posts: true,
-          comments: true,
-          jobListings: true,
-        },
-      },
-    },
-  });
+    }),
+  ]);
 
-  const users = result.map((user) => ({
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    phone: user.phone,
-    role: user.role,
-    location: user.location,
-    createdAt: user.createdAt.toISOString(),
-    isSuspended: user.isSuspended,
-    suspendedAt: user.suspendedAt ? user.suspendedAt.toISOString() : null,
-    shadowBanned: user.shadowBanned,
-    employerProfile: user.employerProfile,
-    stats: {
-      posts: user._count.posts,
-      comments: user._count.comments,
-      jobListings: user._count.jobListings,
-    },
+  const users = result.map((u) => ({
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    phone: u.phone,
+    role: u.role,
+    location: u.location,
+    createdAt: u.createdAt.toISOString(),
+    isSuspended: u.isSuspended,
+    suspendedAt: u.suspendedAt?.toISOString() ?? null,
+    shadowBanned: u.shadowBanned,
+    employerProfile: u.employerProfile,
+    stats: { posts: u._count.posts, comments: u._count.comments, jobListings: u._count.jobListings },
   }));
 
   return NextResponse.json({ users, total, page, pageSize });
-}
+});
 
-export async function PATCH(req: NextRequest) {
-  try {
-    await requireAdminUser();
-  } catch (response) {
-    if (response instanceof NextResponse) {
-      return response;
-    }
-    throw response;
-  }
+export const PATCH = withHandler(async (req: NextRequest) => {
+  await requireAdmin();
 
   const body = await req.json();
-  const { action, userId } = body as {
-    action?: string;
-    userId?: string;
-    value?: string;
-    email?: string;
-    phone?: string;
-    role?: string;
-  };
-
-  if (!action || !userId) {
-    return NextResponse.json(
-      { error: "action and userId are required" },
-      { status: 400 },
-    );
+  const parsed = adminUserActionSchema.safeParse(body);
+  if (!parsed.success) {
+    throw new HttpError(400, parsed.error.errors[0]?.message ?? "Invalid request");
   }
 
+  const { action, userId } = parsed.data;
   let updatedUser;
+
   switch (action) {
     case "suspend":
       updatedUser = await prisma.user.update({
@@ -145,63 +103,38 @@ export async function PATCH(req: NextRequest) {
         data: { isSuspended: false, suspendedAt: null },
       });
       break;
-    case "assignRole": {
-      const newRole = body.role as keyof typeof UserRole | undefined;
-      if (!newRole || !(newRole in UserRole)) {
-        return NextResponse.json({ error: "Invalid role" }, { status: 400 });
-      }
+    case "assignRole":
       updatedUser = await prisma.user.update({
         where: { id: userId },
-        data: { role: newRole },
+        data: { role: (parsed.data as { role: UserRole }).role },
       });
       break;
-    }
     case "shadow":
-      updatedUser = await prisma.user.update({
-        where: { id: userId },
-        data: { shadowBanned: true },
-      });
+      updatedUser = await prisma.user.update({ where: { id: userId }, data: { shadowBanned: true } });
       break;
     case "unshadow":
-      updatedUser = await prisma.user.update({
-        where: { id: userId },
-        data: { shadowBanned: false },
-      });
+      updatedUser = await prisma.user.update({ where: { id: userId }, data: { shadowBanned: false } });
       break;
     case "resetContact": {
-      const { email, phone } = body as {
-        email?: string;
-        phone?: string;
-      };
-      if (!email && !phone) {
-        return NextResponse.json(
-          { error: "Email or phone required" },
-          { status: 400 },
-        );
-      }
+      const { email, phone } = parsed.data as { email?: string; phone?: string };
       updatedUser = await prisma.user.update({
         where: { id: userId },
-        data: {
-          ...(email ? { email } : {}),
-          ...(phone ? { phone } : {}),
-        },
+        data: { ...(email ? { email } : {}), ...(phone ? { phone } : {}) },
       });
       break;
     }
-    default:
-      return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   }
 
   return NextResponse.json({
     success: true,
     user: {
-      id: updatedUser.id,
-      role: updatedUser.role,
-      isSuspended: updatedUser.isSuspended,
-      suspendedAt: updatedUser.suspendedAt,
-      shadowBanned: updatedUser.shadowBanned,
-      email: updatedUser.email,
-      phone: updatedUser.phone,
+      id: updatedUser!.id,
+      role: updatedUser!.role,
+      isSuspended: updatedUser!.isSuspended,
+      suspendedAt: updatedUser!.suspendedAt,
+      shadowBanned: updatedUser!.shadowBanned,
+      email: updatedUser!.email,
+      phone: updatedUser!.phone,
     },
   });
-}
+});

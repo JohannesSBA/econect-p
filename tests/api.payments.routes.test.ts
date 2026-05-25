@@ -62,8 +62,8 @@ describe('payments: checkout', () => {
   })
 
   it('rejects non-employers', async () => {
-    ;(getServerSession as vi.Mock).mockResolvedValue({ user: { email: 'user@test.com' } })
-    mockPrisma.user.findUnique.mockResolvedValue({ id: 'user-1', email: 'user@test.com', role: 'USER' })
+    ;(getServerSession as vi.Mock).mockResolvedValue({ user: { id: 'user-1', email: 'user@test.com' } })
+    mockPrisma.user.findUnique.mockResolvedValue({ id: 'user-1', email: 'user@test.com', role: 'USER', name: null, phone: null, isSuspended: false })
     const req = new NextRequest(
       new Request('http://localhost/api/payments/chapa/checkout', {
         method: 'POST',
@@ -75,8 +75,8 @@ describe('payments: checkout', () => {
   })
 
   it('applies discount codes without calling the gateway', async () => {
-    ;(getServerSession as vi.Mock).mockResolvedValue({ user: { email: employerUser.email } })
-    mockPrisma.user.findUnique.mockResolvedValue(employerUser)
+    ;(getServerSession as vi.Mock).mockResolvedValue({ user: { id: employerUser.id, email: employerUser.email } })
+    mockPrisma.user.findUnique.mockResolvedValue({ ...employerUser, name: null, phone: null, isSuspended: false })
     mockPrisma.jobListing.findUnique.mockResolvedValue({
       id: 'job-1',
       employerId: employerUser.id,
@@ -105,8 +105,8 @@ describe('payments: checkout', () => {
   })
 
   it('initializes checkout session with gateway when no discount', async () => {
-    ;(getServerSession as vi.Mock).mockResolvedValue({ user: { email: employerUser.email } })
-    mockPrisma.user.findUnique.mockResolvedValue(employerUser)
+    ;(getServerSession as vi.Mock).mockResolvedValue({ user: { id: employerUser.id, email: employerUser.email } })
+    mockPrisma.user.findUnique.mockResolvedValue({ ...employerUser, name: null, phone: null, isSuspended: false })
     mockPrisma.jobListing.findUnique.mockResolvedValue({
       id: 'job-2',
       employerId: employerUser.id,
@@ -159,8 +159,8 @@ describe('payments: confirm', () => {
   })
 
   it('returns 404 when payment is missing', async () => {
-    ;(getServerSession as vi.Mock).mockResolvedValue({ user: { email: employerUser.email } })
-    mockPrisma.user.findUnique.mockResolvedValue(employerUser)
+    ;(getServerSession as vi.Mock).mockResolvedValue({ user: { id: employerUser.id, email: employerUser.email } })
+    mockPrisma.user.findUnique.mockResolvedValue({ ...employerUser, name: null, phone: null, isSuspended: false })
     mockPrisma.payment.findUnique.mockResolvedValue(null)
 
     const req = new NextRequest(
@@ -174,8 +174,8 @@ describe('payments: confirm', () => {
   })
 
   it('rejects when payment belongs to another user', async () => {
-    ;(getServerSession as vi.Mock).mockResolvedValue({ user: { email: employerUser.email } })
-    mockPrisma.user.findUnique.mockResolvedValue(employerUser)
+    ;(getServerSession as vi.Mock).mockResolvedValue({ user: { id: employerUser.id, email: employerUser.email } })
+    mockPrisma.user.findUnique.mockResolvedValue({ ...employerUser, name: null, phone: null, isSuspended: false })
     mockPrisma.payment.findUnique.mockResolvedValue({
       id: 'pay-3',
       employerId: 'other-user',
@@ -196,8 +196,8 @@ describe('payments: confirm', () => {
 
   it('short-circuits in dev confirm mode', async () => {
     process.env.CHAPA_DEV_CONFIRM = 'true'
-    ;(getServerSession as vi.Mock).mockResolvedValue({ user: { email: employerUser.email } })
-    mockPrisma.user.findUnique.mockResolvedValue(employerUser)
+    ;(getServerSession as vi.Mock).mockResolvedValue({ user: { id: employerUser.id, email: employerUser.email } })
+    mockPrisma.user.findUnique.mockResolvedValue({ ...employerUser, name: null, phone: null, isSuspended: false })
     mockPrisma.payment.findUnique.mockResolvedValue({
       id: 'pay-4',
       employerId: employerUser.id,
@@ -226,8 +226,8 @@ describe('payments: confirm', () => {
 
   it('verifies with gateway and marks paid on success', async () => {
     process.env.CHAPA_SECRET_KEY = 'sk_test'
-    ;(getServerSession as vi.Mock).mockResolvedValue({ user: { email: employerUser.email } })
-    mockPrisma.user.findUnique.mockResolvedValue(employerUser)
+    ;(getServerSession as vi.Mock).mockResolvedValue({ user: { id: employerUser.id, email: employerUser.email } })
+    mockPrisma.user.findUnique.mockResolvedValue({ ...employerUser, name: null, phone: null, isSuspended: false })
     mockPrisma.payment.findUnique.mockResolvedValue({
       id: 'pay-5',
       employerId: employerUser.id,
