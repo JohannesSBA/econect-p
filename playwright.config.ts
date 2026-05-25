@@ -1,18 +1,21 @@
 import { defineConfig, devices } from '@playwright/test'
 
+const BASE_URL = process.env.TEST_BASE_URL || (process.env.CI ? 'http://localhost:3000' : 'http://localhost:3002')
+
 export default defineConfig({
   testDir: './e2e',
   timeout: 60_000,
   retries: process.env.CI ? 2 : 0,
   webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:3002',
-    reuseExistingServer: true,
+    // In CI we test against the production build (`npm start`).
+    // Locally we use the dev server to avoid requiring a pre-built app.
+    command: process.env.CI ? 'npm start' : 'npm run dev',
+    url: BASE_URL,
+    reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },
   use: {
-    // Align with dev fallback when 3000 is taken
-    baseURL: process.env.TEST_BASE_URL || 'http://localhost:3002',
+    baseURL: BASE_URL,
     trace: 'on-first-retry',
   },
   projects: [

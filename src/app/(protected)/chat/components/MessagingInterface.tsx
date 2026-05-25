@@ -113,14 +113,14 @@ export default function Conversations({
 
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center rounded-xl bg-white/70">
+      <div className="flex h-full w-full items-center justify-center rounded-xl bg-white/70">
         <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
       </div>
     );
   }
 
   return (
-    <div className="relative flex h-full min-h-[460px] flex-col overflow-hidden rounded-2xl bg-[radial-gradient(circle_at_top,_#f5f9ff,_#eef2ff_55%,_#f8f9fb)] shadow-inner">
+    <div className="relative flex h-full min-h-[460px] w-full flex-col overflow-hidden rounded-2xl bg-[radial-gradient(circle_at_top,_#f5f9ff,_#eef2ff_55%,_#f8f9fb)] shadow-inner">
       <MessageSearchBar
         query={searchQuery}
         results={searchResults}

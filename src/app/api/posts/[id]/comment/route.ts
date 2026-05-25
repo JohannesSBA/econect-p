@@ -1,77 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/options";
-import prisma from "@/lib/prisma"
 
-// POST /api/posts/[id]/comment - Add comment to a post
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+import { withHandler, type RouteContext } from "@/lib/api";
+import { requireUser } from "@/lib/auth";
+import { HttpError } from "@/lib/errors";
+import prisma from "@/lib/prisma";
+import { rateLimit } from "@/lib/rateLimiter";
+import { createCommentSchema } from "@/lib/validation/posts";
 
-    const { content } = await request.json()
+export const POST = withHandler(async (req: NextRequest, ctx?: RouteContext) => {
+  const rl = rateLimit(req, "posts:comment", 30, 60 * 1000);
+  if (!rl.allowed) throw new HttpError(429, `Too many requests. Retry in ${rl.retryAfterSeconds}s.`);
 
-    if (!content || content.trim().length === 0) {
-      return NextResponse.json({ error: "Comment content is required" }, { status: 400 })
-    }
+  const user = await requireUser();
+  const { id: postId } = await ctx!.params;
+  const { content } = createCommentSchema.parse(await req.json());
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email }
-    })
+  const post = await prisma.post.findUnique({ where: { id: postId } });
+  if (!post) throw new HttpError(404, "Post not found");
 
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
-    }
+  const comment = await prisma.comment.create({
+    data: { content: content.trim(), userId: user.id, postId },
+    include: { user: { select: { id: true, name: true, image: true } } },
+  });
 
-    const { id: postId } = await params
-
-    // Check if post exists
-    const post = await prisma.post.findUnique({
-      where: { id: postId }
-    })
-
-    if (!post) {
-      return NextResponse.json({ error: "Post not found" }, { status: 404 })
-    }
-
-    const comment = await prisma.comment.create({
+  if (post.authorId !== user.id) {
+    await prisma.notification.create({
       data: {
-        content: content.trim(),
-        userId: user.id,
-        postId
+        userId: post.authorId,
+        type: "COMMENT",
+        title: "New comment on your post",
+        message: `${user.name} commented on your post`,
+        data: { postId, commenterId: user.id, commentId: comment.id },
       },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            image: true
-          }
-        }
-      }
-    })
-
-    // Notify post author
-    if (post.authorId !== user.id) {
-      await prisma.notification.create({
-        data: {
-          userId: post.authorId,
-          type: 'COMMENT',
-          title: 'New comment on your post',
-          message: `${user.name} commented on your post`,
-          data: { postId, commenterId: user.id, commentId: comment.id },
-        }
-      })
-    }
-
-    return NextResponse.json({ comment })
-  } catch (error) {
-    console.error("Error creating comment:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    });
   }
-} 
+
+  return NextResponse.json({ comment }, { status: 201 });
+});

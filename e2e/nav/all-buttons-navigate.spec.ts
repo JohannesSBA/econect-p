@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test'
 
 const PAGES = [
-  '/en',
-  '/en/auth/login',
-  '/en/dashboard',
+  '/',
+  '/auth/login',
+  '/auth/register',
 ]
 
 test.describe('Nav smoke: click visible links/buttons', () => {

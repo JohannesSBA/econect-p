@@ -33,8 +33,14 @@ A full-stack professional networking platform tailored for Ethiopia. Econnect sh
 ├─ public/                  # Static assets (logos, icons, etc.)
 ├─ src/
 │  ├─ app/                  # Next.js App Router (routes, API handlers, layouts)
-│  ├─ components/           # Reusable UI components (shadcn/ui, feature modules)
-│  ├─ lib/                  # Socket helpers, S3 utilities, payments, auth
+│  │  ├─ api/               # REST/JSON endpoints (admin, employer, jobs, payments, message)
+│  │  ├─ (protected)/       # Authenticated pages (admin dashboard, jobs, chat, profile, etc.)
+│  │  ├─ auth/              # Public auth flows (login/register)
+│  │  ├─ employer/          # Employer dashboards/routes
+│  │  └─ providers/         # App-wide providers
+│  ├─ components/           # Reusable UI components (shadcn/ui, shared widgets)
+│  ├─ features/             # Feature barrels for clearer imports (admin, jobs)
+│  ├─ lib/                  # Cross-cutting libs (prisma, auth guards, rate limiter, S3, socket, payments)
 │  ├─ types/                # Shared TypeScript types
 │  └─ utils/                # Utility helpers (formatters, validators)
 ├─ tests/                   # Vitest suites
@@ -43,6 +49,7 @@ A full-stack professional networking platform tailored for Ethiopia. Econnect sh
 ├─ docker-compose.yml       # Local Postgres + pgAdmin setup
 ├─ start-dev.sh             # Starts Socket.IO + Next.js together
 ├─ QUICK_START.md           # Hands-on walkthrough for contributors
+├─ docs/ARCHITECTURE.md     # Detailed src/ navigation map
 └─ README.md
 ```
 
@@ -74,6 +81,7 @@ A full-stack professional networking platform tailored for Ethiopia. Econnect sh
    npx prisma generate
    npx prisma migrate dev --name init
    ```
+   Prisma 7 reads the connection URL from `prisma.config.ts`; ensure `DATABASE_URL` is set before running CLI commands.
 5. **Seed baseline data (admin, demo users, sample jobs)**
    ```bash
    npm run seed
@@ -181,6 +189,11 @@ Run messaging end-to-end locally by starting the stack with `npm run dev`, then 
 ## Testing & QA
 - **Unit tests**: `npm test` (Vitest) with coverage via `@vitest/coverage-v8`.
 - **End-to-end**: `npm run test:e2e` (Playwright). Configure base URL and auth fixtures in `playwright.config.ts`.
+- **Admin/payment API E2E**: `e2e/admin-flows.spec.ts` exercises job approval, employer verification, and payment initiation. Set:
+  - `E2E_BASE_URL` (default `http://localhost:3000`)
+  - `E2E_ADMIN_STORAGE` (Playwright storage state JSON for an admin user)
+  - `E2E_EMPLOYER_STORAGE` (storage state for an employer user)
+  - `E2E_JOB_ID`, `E2E_EMPLOYER_PROFILE_ID`, `E2E_PAYMENT_JOB_ID` (records targeted in the flow)
 - **CI**: `.github/workflows/ci.yml` installs deps (`npm ci`), runs Prisma generate, lints, runs tests, and builds.
 
 Before pushing, run:
@@ -189,6 +202,20 @@ npm run lint
 npm test
 npm run test:e2e
 ```
+
+## Conventions & Patterns
+- **Path alias**: Use `@/` to import from `src/...` (configured in `tsconfig.json` and `vitest.config.ts`).
+- **Features**: Domain UI and hooks live under `src/features/*` (e.g., `src/features/admin/ui`, `src/features/jobs/ui`) with barrels for ergonomics (`import { AdminUserTable } from "@/features/admin"`).
+- **Services**: Server-side domain logic lives under `src/services/*` (jobs, payments, messaging, admin). Keep API routes thin and delegate role checks + DB access to services.
+- **Validation**: API payload schemas live under `src/lib/validation/*` (jobs, messages, payments) and should gate input before DB calls.
+- **Auth/roles**: Use shared guards (`src/lib/adminAuth.ts`) instead of ad-hoc role checks in API routes.
+- **Rate limiting**: `src/lib/rateLimiter.ts` guards auth endpoints; move to Redis for multi-instance deployments (see TODO).
+- **Error handling**: Keep API responses consistent (`{ error: string }` with appropriate HTTP status).
+- **Logging**: Avoid noisy `console.log` in request handlers; rely on structured logs where needed.
+- **Prisma config**: `prisma.config.ts` holds the datasource URL; `PrismaClient` is instantiated with the default constructor (`DATABASE_URL` is required).
+
+## TODO
+- Move rate limiting to a shared store (e.g., Redis/Upstash) for multi-instance deployments and stronger abuse protection.
 
 ---
 
@@ -205,6 +232,14 @@ npm run test:e2e
 4. **Socket.IO**: Deploy `server.js` on an EC2 instance (Node 20 + PM2). Front with Nginx and TLS at `wss://realtime.econnect.et`.
 5. **Payments**: Configure Chapa dashboard return + callback URLs to your production domains.
 6. **Domains**: Point `app.econnect.et` → Amplify and `realtime.econnect.et` → EC2 load balancer/instance.
+
+---
+
+## Observability
+- **WebSocket metrics**: `server.js` now emits `[WS metrics] connections=X msgs_per_interval=Y total_msgs=Z` once per minute (configurable via `WS_METRICS_INTERVAL_MS`). That gives a quick read on how many live chat clients you have and whether throughput is spiking before saturation hits.
+- **Database timing**: Messaging APIs wrap Prisma calls in a lightweight `traceQuery` helper, logging `[DB] label 12.3ms` for user lookups, thread fetches, message inserts, etc. These logs surface slow queries straight in application output so you can catch regressions or missing indexes during load tests—long before end-users feel it.
+
+Keep these logs enabled in staging/production and wire them into CloudWatch or your log aggregator of choice to spot bottlenecks early.
 
 ---
 

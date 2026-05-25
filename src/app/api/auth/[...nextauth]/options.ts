@@ -1,12 +1,18 @@
-import { NextAuthOptions } from "next-auth"
-import CredentialsProvider from "next-auth/providers/credentials"
-import prisma from "@/lib/prisma"
-import { compare } from "bcryptjs"
-import { User } from "@/generated/prisma"
+import { NextAuthOptions } from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
+import { compare } from "bcryptjs";
+
+import prisma from "@/lib/prisma";
+import { User } from "@/generated/prisma";
+
+const authSecret = process.env.NEXTAUTH_SECRET;
+if (!authSecret) {
+  throw new Error("NEXTAUTH_SECRET is required for authentication");
+}
 
 export const authOptions: NextAuthOptions = {
-  secret: process.env.NEXTAUTH_SECRET,
-  
+  secret: authSecret,
+
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
@@ -20,20 +26,29 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(creds) {
         if (!creds?.email || !creds.password) {
-          throw new Error("Email and password required")
+          throw new Error("Email and password required");
         }
         const user = await prisma.user.findUnique({
           where: { email: creds.email },
-        })
-        if (!user || !(await compare(creds.password, user.password!))) {
-          throw new Error("Invalid email or password")
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            role: true,
+            password: true,
+          },
+        });
+        if (!user?.password) {
+          throw new Error("Invalid email or password");
         }
+        const valid = await compare(creds.password, user.password);
+        if (!valid) throw new Error("Invalid email or password");
         return {
           id: user.id,
           email: user.email,
           name: user.name,
           role: user.role,
-        }
+        };
       },
     }),
   ],
@@ -41,10 +56,10 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       // On initial sign in, merge in returned user fields
       if (user) {
-        token.id = user.id
-        token.role = (user as User).role
+        token.id = user.id;
+        token.role = (user as User).role;
       }
-      return token
+      return token;
     },
     async session({ session, token }) {
       // Check if session.user exists before accessing it
@@ -52,14 +67,14 @@ export const authOptions: NextAuthOptions = {
         session.user = {
           ...session.user,
           id: token.id as string,
-          role: token.role as string
-        } as { id: string; role: string; } & typeof session.user
+          role: token.role as string,
+        } as { id: string; role: string } & typeof session.user;
       }
-      return session
+      return session;
     },
   },
   pages: {
-    signIn: "/auth/login",    // your custom sign-in page
-    error: "/auth/error",     // error display page (optional)
+    signIn: "/auth/login", // your custom sign-in page
+    error: "/auth/error", // error display page (optional)
   },
-}
+};

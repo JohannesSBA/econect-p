@@ -1,40 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/getCurrentUser";
+
+import { withHandler } from "@/lib/api";
+import { requireUser } from "@/lib/auth";
+import { HttpError } from "@/lib/errors";
 import prisma from "@/lib/prisma";
+import { profileImageSchema } from "@/lib/validation/users";
 
-export async function PUT(req: NextRequest) {
-  try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
+export const PUT = withHandler(async (req: NextRequest) => {
+  const user = await requireUser();
 
-    const { imageUrl } = await req.json();
-    // Allow empty string to clear the profile image
-    if (typeof imageUrl !== 'string') {
-      return NextResponse.json({ message: "Invalid imageUrl" }, { status: 400 });
-    }
+  const parsed = profileImageSchema.safeParse(await req.json());
+  if (!parsed.success) throw new HttpError(400, "Invalid imageUrl");
 
-    // Update the user's profile image in the database
-    const updatedUser = await prisma.user.update({
-      where: { id: user.id },
-      data: { image: imageUrl || null },
-    });
+  const updatedUser = await prisma.user.update({
+    where: { id: user.id },
+    data: { image: parsed.data.imageUrl || null },
+    select: { id: true, name: true, email: true, image: true, headline: true, role: true },
+  });
 
-    return NextResponse.json({ 
-      message: "Profile image updated successfully",
-      user: {
-        id: updatedUser.id,
-        name: updatedUser.name,
-        email: updatedUser.email,
-        image: updatedUser.image,
-        headline: updatedUser.headline,
-        role: updatedUser.role
-      }
-    }, { status: 200 });
-
-  } catch (error) {
-    console.error("Error updating profile image:", error);
-    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
-  }
-} 
+  return NextResponse.json({
+    message: "Profile image updated successfully",
+    user: updatedUser,
+  });
+});

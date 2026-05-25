@@ -1,250 +1,145 @@
-import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/app/api/auth/[...nextauth]/options"
-import prisma from "@/lib/prisma"
+import { NextRequest, NextResponse } from "next/server";
 
-// GET /api/posts - Get posts for user's feed
-export async function GET(request: NextRequest) {
+import { withHandler } from "@/lib/api";
+import { requireUser } from "@/lib/auth";
+import { PostType } from "@/generated/prisma";
+import { HttpError } from "@/lib/errors";
+import prisma from "@/lib/prisma";
+import { rateLimit } from "@/lib/rateLimiter";
+import { createPostSchema } from "@/lib/validation/posts";
+
+export const GET = withHandler(async (req: NextRequest) => {
+  const user = await requireUser();
+
+  const { searchParams } = new URL(req.url);
+  const cursor = searchParams.get("cursor");
+  const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") || "8")));
+
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    include: {
+      sentConnections: { where: { status: "ACCEPTED" }, select: { receiverId: true } },
+      receivedConnections: { where: { status: "ACCEPTED" }, select: { senderId: true } },
+    },
+  });
+
+  if (!dbUser) throw new HttpError(404, "User not found");
+
+  const connectedUserIds = [
+    ...dbUser.sentConnections.map((c) => c.receiverId),
+    ...dbUser.receivedConnections.map((c) => c.senderId),
+    user.id,
+  ];
+
+  let blockedUserIds: string[] = [];
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+    const blocks = await (prisma as any).userBlock.findMany({
+      where: { OR: [{ blockerId: user.id }, { blockedId: user.id }] },
+      select: { blockerId: true, blockedId: true },
+    });
+    blockedUserIds = blocks.map((b: any) =>
+      b.blockerId === user.id ? b.blockedId : b.blockerId,
+    );
+  } catch {}
 
-    const { searchParams } = new URL(request.url)
-    const cursor = searchParams.get('cursor')
-    const limit = parseInt(searchParams.get("limit") || "8")
+  let followedCompanyIds: string[] = [];
+  try {
+    const follows = await (prisma as any).companyFollow.findMany({
+      where: { followerId: user.id },
+      select: { companyId: true },
+    });
+    followedCompanyIds = follows.map((f: any) => f.companyId);
+  } catch {}
 
-    // Get user's connections
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      include: {
-        sentConnections: {
-          where: { status: "ACCEPTED" },
-          include: { receiver: true }
-        },
-        receivedConnections: {
-          where: { status: "ACCEPTED" },
-          include: { sender: true }
-        }
-      }
-    })
+  const authorIdsSet = new Set<string>([...connectedUserIds, ...followedCompanyIds]);
+  for (const b of blockedUserIds) authorIdsSet.delete(b);
+  const authorIds = Array.from(authorIdsSet);
 
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
-    }
+  const posts = await prisma.post.findMany({
+    where: { authorId: { in: authorIds } },
+    include: {
+      author: { select: { id: true, name: true, image: true, headline: true } },
+      likes: { include: { user: { select: { id: true, name: true } } } },
+      comments: {
+        include: { user: { select: { id: true, name: true, image: true } } },
+        orderBy: { createdAt: "desc" },
+      },
+      _count: { select: { likes: true, comments: true } },
+    },
+    orderBy: { createdAt: "desc" },
+    take: limit + 1,
+    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : ({} as any)),
+  });
 
-    // Get connected user IDs
-    const connectedUserIds = [
-      ...user.sentConnections.map(c => c.receiverId),
-      ...user.receivedConnections.map(c => c.senderId),
-      user.id // Include user's own posts
-    ]
+  let nextCursor: string | null = null;
+  if (posts.length > limit) {
+    nextCursor = posts.pop()!.id;
+  }
 
-    // Exclude blocked users (both directions)
-    let blockedUserIds: string[] = []
-    try {
-      const blocks = await (prisma as any).userBlock.findMany({
-        where: {
-          OR: [
-            { blockerId: user.id },
-            { blockedId: user.id }
-          ]
-        },
-        select: { blockerId: true, blockedId: true }
-      })
-      blockedUserIds = blocks.map((b: any) => (b.blockerId === user.id ? b.blockedId : b.blockerId))
-    } catch {}
+  if (!posts.length) {
+    const since = new Date(Date.now() - 1000 * 60 * 60 * 48);
+    const blockedSet = new Set(blockedUserIds);
 
-    // Include followed companies
-    let followedCompanyIds: string[] = []
-    try {
-      const follows = await (prisma as any).companyFollow.findMany({
-        where: { followerId: user.id },
-        select: { companyId: true }
-      })
-      followedCompanyIds = follows.map((f: any) => f.companyId)
-    } catch {}
-
-    // Build allowed author IDs (connections + self + followed companies) minus blocked users
-    const authorIdsSet = new Set<string>([...connectedUserIds, ...followedCompanyIds])
-    for (const b of blockedUserIds) authorIdsSet.delete(b)
-    const authorIds = Array.from(authorIdsSet)
-
-    // Get posts from allowed authors
-    const posts = await prisma.post.findMany({
+    const candidates = await prisma.post.findMany({
       where: {
-        authorId: { in: authorIds }
+        createdAt: { gte: since },
+        authorId: blockedUserIds.length ? { notIn: Array.from(blockedSet) } : undefined,
       },
       include: {
-        author: {
-          select: {
-            id: true,
-            name: true,
-            image: true,
-            headline: true
-          }
-        },
-        likes: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true
-              }
-            }
-          }
-        },
+        author: { select: { id: true, name: true, image: true, headline: true } },
+        likes: { where: { createdAt: { gte: since } }, select: { id: true } },
         comments: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                image: true
-              }
-            }
-          },
-          orderBy: { createdAt: "desc" }
+          where: { createdAt: { gte: since } },
+          include: { user: { select: { id: true, name: true, image: true } } },
+          orderBy: { createdAt: "desc" },
         },
-        _count: {
-          select: {
-            likes: true,
-            comments: true
-          }
-        }
+        bookmarks: { where: { userId: user.id }, select: { id: true } },
+        _count: { select: { likes: true, comments: true } },
       },
-      orderBy: { createdAt: "desc" },
-      take: limit + 1,
-      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {} as any)
-    })
+      take: 50,
+    });
 
-    let nextCursor: string | null = null
-    if (posts.length > limit) {
-      const next = posts.pop()!
-      nextCursor = next.id
-    }
-
-    // If no personalized posts, provide trending posts within last 48 hours
-    if (!posts || posts.length === 0) {
-      const since = new Date(Date.now() - 1000 * 60 * 60 * 48)
-
-      // Exclude blocked authors from trending as well
-      const blockedSet = new Set(blockedUserIds)
-
-      const candidates = await prisma.post.findMany({
-        where: {
-          createdAt: { gte: since },
-          authorId: blockedUserIds.length ? { notIn: Array.from(blockedSet) } : undefined,
-        },
-        include: {
-          author: {
-            select: { id: true, name: true, image: true, headline: true }
-          },
-          likes: {
-            where: { createdAt: { gte: since } },
-            select: { id: true }
-          },
-          comments: {
-            where: { createdAt: { gte: since } },
-            include: { user: { select: { id: true, name: true, image: true } } },
-            orderBy: { createdAt: 'desc' }
-          },
-          bookmarks: {
-            where: { userId: user.id },
-            select: { id: true }
-          },
-          _count: { select: { likes: true, comments: true } }
-        },
-        take: 50
+    const trending = candidates
+      .sort((a: any, b: any) => {
+        const sa = (a.likes?.length || 0) + (a.comments?.length || 0);
+        const sb = (b.likes?.length || 0) + (b.comments?.length || 0);
+        if (sb !== sa) return sb - sa;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       })
+      .slice(0, limit);
 
-      // Sort by interaction score (likes + comments in window), break ties by recency
-      const trendingSorted = candidates
-        .sort((a: any, b: any) => {
-          const sa = (a.likes?.length || 0) + (a.comments?.length || 0)
-          const sb = (b.likes?.length || 0) + (b.comments?.length || 0)
-          if (sb !== sa) return sb - sa
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        })
-        .slice(0, limit)
-
-      return NextResponse.json({ posts: [], nextCursor: null, trending: trendingSorted })
-    }
-
-    // TODO: inject approved ads at cadence in follow-up
-    return NextResponse.json({ posts, nextCursor })
-  } catch (error) {
-    console.error("Error fetching posts:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return NextResponse.json({ posts: [], nextCursor: null, trending });
   }
-}
 
-// POST /api/posts - Create a new post
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+  return NextResponse.json({ posts, nextCursor });
+});
 
-    const { title, content, type = "TEXT", images = [], linkUrl } = await request.json()
+export const POST = withHandler(async (req: NextRequest) => {
+  const rl = rateLimit(req, "posts:create", 10, 60 * 1000);
+  if (!rl.allowed) throw new HttpError(429, `Too many requests. Retry in ${rl.retryAfterSeconds}s.`);
 
-    if (!content || content.trim().length === 0) {
-      return NextResponse.json({ error: "Content is required" }, { status: 400 })
-    }
-    if (title && title.length > 200) {
-      return NextResponse.json({ error: "Title must be 200 characters or less" }, { status: 400 })
-    }
-    if (!Array.isArray(images)) {
-      return NextResponse.json({ error: "Images must be an array" }, { status: 400 })
-    }
-    if (images.length > 3) {
-      return NextResponse.json({ error: "You can upload up to 3 images" }, { status: 400 })
-    }
-    const sanitizedImages = images
-      .filter((u: unknown) => typeof u === 'string' && (u as string).startsWith('http'))
-      .slice(0, 3)
+  const user = await requireUser();
+  const parsed = createPostSchema.parse(await req.json());
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email }
-    })
+  const sanitizedImages = (parsed.images ?? []).filter(
+    (u) => typeof u === "string" && u.startsWith("http"),
+  );
 
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
-    }
+  const post = await prisma.post.create({
+    data: {
+      title: parsed.title?.trim() || null,
+      content: parsed.content.trim(),
+      type: (parsed.type ?? "TEXT") as PostType,
+      imageUrl: sanitizedImages[0] || null,
+      linkUrl: parsed.linkUrl ?? null,
+      images: sanitizedImages,
+      authorId: user.id,
+    },
+    include: {
+      author: { select: { id: true, name: true, image: true, headline: true } },
+      _count: { select: { likes: true, comments: true } },
+    },
+  });
 
-    const post = await prisma.post.create({
-      data: {
-        title: title?.trim() || null,
-        content: content.trim(),
-        type,
-        imageUrl: sanitizedImages[0] || null,
-        linkUrl,
-        images: sanitizedImages,
-        authorId: user.id
-      },
-      include: {
-        author: {
-          select: {
-            id: true,
-            name: true,
-            image: true,
-            headline: true
-          }
-        },
-        _count: {
-          select: {
-            likes: true,
-            comments: true
-          }
-        }
-      }
-    })
-
-    return NextResponse.json({ post })
-  } catch (error) {
-    console.error("Error creating post:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
-  }
-}
+  return NextResponse.json({ post }, { status: 201 });
+});
