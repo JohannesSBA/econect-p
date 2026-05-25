@@ -1,102 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/options";
+
+import { withHandler } from "@/lib/api";
+import { requireUser } from "@/lib/auth";
+import { HttpError } from "@/lib/errors";
 import prisma from "@/lib/prisma";
+import { editMessageSchema } from "@/lib/validation/posts";
 
-// PUT /api/message/[id] - Edit message
-export async function PUT(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+type Ctx = { params: Promise<{ id: string }> };
 
-  const user = await prisma.user.findUnique({ where: { email: session.user.email } });
-  if (!user) {
-    return NextResponse.json({ error: "User not found" }, { status: 404 });
-  }
+export const PUT = withHandler(async (req: NextRequest, ctx?: Ctx) => {
+  const user = await requireUser();
+  const { id: messageId } = await ctx!.params;
+  const { text } = editMessageSchema.parse(await req.json());
 
-  const { text } = await req.json();
-  const { id: messageId } = await params;
+  const message = await prisma.message.findFirst({
+    where: { id: messageId, senderId: user.id },
+  });
+  if (!message) throw new HttpError(404, "Message not found or access denied");
 
-  if (!text || !text.trim()) {
-    return NextResponse.json({ error: "Message text is required" }, { status: 400 });
-  }
+  const updated = await prisma.message.update({
+    where: { id: messageId },
+    data: { text: text.trim(), isEdited: true, editedAt: new Date() },
+  });
 
-  try {
-    // Check if user owns this message
-    const message = await prisma.message.findFirst({
-      where: {
-        id: messageId,
-        senderId: user.id
-      }
-    });
+  return NextResponse.json(updated);
+});
 
-    if (!message) {
-      return NextResponse.json({ error: "Message not found or access denied" }, { status: 404 });
-    }
+export const DELETE = withHandler(async (_req: NextRequest, ctx?: Ctx) => {
+  const user = await requireUser();
+  const { id: messageId } = await ctx!.params;
 
-    // Update message
-    const updatedMessage = await prisma.message.update({
-      where: {
-        id: messageId
-      },
-      data: {
-        text: text.trim(),
-        isEdited: true,
-        editedAt: new Date()
-      }
-    });
+  const message = await prisma.message.findFirst({
+    where: { id: messageId, senderId: user.id },
+  });
+  if (!message) throw new HttpError(404, "Message not found or access denied");
 
-    return NextResponse.json(updatedMessage);
-  } catch (error) {
-    console.error("Error editing message:", error);
-    return NextResponse.json({ error: "Failed to edit message" }, { status: 500 });
-  }
-}
+  await prisma.message.delete({ where: { id: messageId } });
 
-// DELETE /api/message/[id] - Delete message
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const user = await prisma.user.findUnique({ where: { email: session.user.email } });
-  if (!user) {
-    return NextResponse.json({ error: "User not found" }, { status: 404 });
-  }
-
-  const { id: messageId } = await params;
-
-  try {
-    // Check if user owns this message
-    const message = await prisma.message.findFirst({
-      where: {
-        id: messageId,
-        senderId: user.id
-      }
-    });
-
-    if (!message) {
-      return NextResponse.json({ error: "Message not found or access denied" }, { status: 404 });
-    }
-
-    // Delete message (this will cascade delete reactions and attachments)
-    await prisma.message.delete({
-      where: {
-        id: messageId
-      }
-    });
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("Error deleting message:", error);
-    return NextResponse.json({ error: "Failed to delete message" }, { status: 500 });
-  }
-} 
+  return NextResponse.json({ success: true });
+});

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { withHandler } from "@/lib/api";
 import { requireUser } from "@/lib/auth";
 import { HttpError } from "@/lib/errors";
+import { rateLimit } from "@/lib/rateLimiter";
 import { uploadChatAttachment } from "@/lib/s3-upload";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -24,6 +25,9 @@ const ALLOWED_TYPES = new Set([
 ]);
 
 export const POST = withHandler(async (req: NextRequest) => {
+  const rl = rateLimit(req, "message:upload", 30, 60 * 1000);
+  if (!rl.allowed) throw new HttpError(429, `Too many uploads. Retry in ${rl.retryAfterSeconds}s.`);
+
   const user = await requireUser();
 
   const formData = await req.formData();

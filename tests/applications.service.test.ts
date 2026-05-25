@@ -1,24 +1,26 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const txMock = {
+  jobApplication: { create: vi.fn(), update: vi.fn() },
+  notification: { create: vi.fn() },
+};
 
 const mockPrisma = {
-  jobListing: {
-    findFirst: vi.fn(),
-    findUnique: vi.fn(),
-  },
-  jobApplication: {
-    findUnique: vi.fn(),
-    create: vi.fn(),
-    update: vi.fn(),
-  },
-  notification: {
-    create: vi.fn(),
-  },
+  jobListing: { findFirst: vi.fn(), findUnique: vi.fn() },
+  jobApplication: { findUnique: vi.fn() },
+  $transaction: vi.fn(),
 };
 
 vi.mock("@/lib/prisma", () => ({ __esModule: true, default: mockPrisma }));
 
 const { applyToJob, updateApplicationStatus } = await import("@/services/applications");
-const { HttpError } = await import("@/lib/errors");
+
+// Re-wire $transaction to execute the callback each time (resetAllMocks wipes the impl).
+beforeEach(() => {
+  mockPrisma.$transaction.mockImplementation((fn: (tx: typeof txMock) => unknown) => fn(txMock));
+});
+
+afterEach(() => vi.resetAllMocks());
 
 const openJob = {
   id: "job1",
@@ -29,14 +31,12 @@ const openJob = {
   isPublished: true,
 };
 
-afterEach(() => vi.resetAllMocks());
-
 describe("applyToJob", () => {
   it("creates an application for a valid open job", async () => {
     mockPrisma.jobListing.findFirst.mockResolvedValue(openJob);
     mockPrisma.jobApplication.findUnique.mockResolvedValue(null);
-    mockPrisma.jobApplication.create.mockResolvedValue({ id: "app1", userId: "s1", jobId: "job1" });
-    mockPrisma.notification.create.mockResolvedValue({});
+    txMock.jobApplication.create.mockResolvedValue({ id: "app1", userId: "s1", jobId: "job1" });
+    txMock.notification.create.mockResolvedValue({});
 
     const result = await applyToJob({
       userId: "s1",
@@ -46,7 +46,7 @@ describe("applyToJob", () => {
     });
 
     expect(result.id).toBe("app1");
-    expect(mockPrisma.jobApplication.create).toHaveBeenCalledWith(
+    expect(txMock.jobApplication.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: "PENDING" }) }),
     );
   });
@@ -54,12 +54,12 @@ describe("applyToJob", () => {
   it("notifies the employer on new application", async () => {
     mockPrisma.jobListing.findFirst.mockResolvedValue(openJob);
     mockPrisma.jobApplication.findUnique.mockResolvedValue(null);
-    mockPrisma.jobApplication.create.mockResolvedValue({ id: "app1", userId: "s1", jobId: "job1" });
-    mockPrisma.notification.create.mockResolvedValue({});
+    txMock.jobApplication.create.mockResolvedValue({ id: "app1", userId: "s1", jobId: "job1" });
+    txMock.notification.create.mockResolvedValue({});
 
     await applyToJob({ userId: "s1", userName: "Alice", jobId: "job1", resumeUrl: "https://cdn.example.com/r.pdf" });
 
-    expect(mockPrisma.notification.create).toHaveBeenCalledWith(
+    expect(txMock.notification.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ userId: "emp1", type: "APPLICATION_UPDATE" }),
       }),
@@ -91,8 +91,9 @@ describe("updateApplicationStatus", () => {
   it("allows employer to update their job's application", async () => {
     mockPrisma.jobApplication.findUnique.mockResolvedValue(existingApp);
     mockPrisma.jobListing.findUnique.mockResolvedValue(jobRecord);
-    mockPrisma.jobApplication.update.mockResolvedValue({ ...existingApp, status: "REVIEWING" });
-    mockPrisma.notification.create.mockResolvedValue({});
+    const updatedApp = { ...existingApp, status: "REVIEWING", user: { id: "s1", name: "Alice", email: "a@b.com" } };
+    txMock.jobApplication.update.mockResolvedValue(updatedApp);
+    txMock.notification.create.mockResolvedValue({});
 
     const result = await updateApplicationStatus({
       applicationId: "app1",
@@ -120,8 +121,9 @@ describe("updateApplicationStatus", () => {
   it("allows ADMIN to update any application", async () => {
     mockPrisma.jobApplication.findUnique.mockResolvedValue(existingApp);
     mockPrisma.jobListing.findUnique.mockResolvedValue(jobRecord);
-    mockPrisma.jobApplication.update.mockResolvedValue({ ...existingApp, status: "REJECTED" });
-    mockPrisma.notification.create.mockResolvedValue({});
+    const updatedApp = { ...existingApp, status: "REJECTED", user: { id: "s1", name: "Alice", email: "a@b.com" } };
+    txMock.jobApplication.update.mockResolvedValue(updatedApp);
+    txMock.notification.create.mockResolvedValue({});
 
     await expect(
       updateApplicationStatus({

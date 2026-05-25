@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
 import { performance } from "perf_hooks";
-import { authOptions } from "@/app/api/auth/[...nextauth]/options";
+
+import { requireUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { rateLimit } from "@/lib/rateLimiter";
 import { sendMessageSchema, threadQuerySchema } from "@/lib/validation/messages";
 
 async function traceQuery<T>(label: string, fn: () => Promise<T>): Promise<T> {
@@ -17,18 +18,18 @@ async function traceQuery<T>(label: string, fn: () => Promise<T>): Promise<T> {
 
 // GET /api/message/thread?userId=...
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  let user: { id: string };
+  try {
+    user = await requireUser();
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const { searchParams } = new URL(req.url);
   const parsed = threadQuerySchema.safeParse({ userId: searchParams.get("userId") });
   if (!parsed.success) {
     return NextResponse.json({ error: "userId is required" }, { status: 400 });
   }
   const { userId } = parsed.data;
-  const user = await traceQuery("message:getUserByEmail", () =>
-    prisma.user.findUnique({ where: { email: session.user.email ?? undefined } }),
-  );
-  if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
   const messages = await prisma.message.findMany({
     where: {
       OR: [
@@ -43,12 +44,24 @@ export async function GET(req: NextRequest) {
 
 // POST /api/message
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  
-  const user = await prisma.user.findUnique({ where: { email: session.user.email } });
+  const rl = rateLimit(req, "message:send", 60, 60 * 1000);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: `Too many messages. Retry in ${rl.retryAfterSeconds}s.` },
+      { status: 429 },
+    );
+  }
+
+  let authUser: { id: string; role: string; name: string | null };
+  try {
+    authUser = await requireUser();
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: authUser.id } });
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
-  
+
   const parsed = sendMessageSchema.safeParse(await req.json());
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid message payload" }, { status: 400 });

@@ -1,30 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+
+import { withHandler } from "@/lib/api";
+import { requireUser } from "@/lib/auth";
+import { HttpError } from "@/lib/errors";
 import prisma from "@/lib/prisma";
-import { authOptions } from "../../auth/[...nextauth]/options";
 
-export async function DELETE(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const id = searchParams.get("id");
+export const DELETE = withHandler(async (req: NextRequest) => {
+  const user = await requireUser();
 
-  if (!id) {
-    return NextResponse.json({ error: "ID is required" }, { status: 400 });
-  }
+  const id = new URL(req.url).searchParams.get("id");
+  if (!id) throw new HttpError(400, "ID is required");
 
-  const session = await getServerSession(authOptions);
-
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const userId = session?.user?.id;
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const _experience = await prisma.experience.delete({
-    where: { id: id }
+  const experience = await prisma.experience.findUnique({
+    where: { id },
+    include: { jobSeekerProfile: { select: { userId: true } } },
   });
 
-  return NextResponse.json({ message: "Experience deleted" }, { status: 200 });
-}
+  if (!experience) throw new HttpError(404, "Experience not found");
+  if (experience.jobSeekerProfile?.userId !== user.id) throw new HttpError(403, "Forbidden");
+
+  await prisma.experience.delete({ where: { id } });
+
+  return NextResponse.json({ message: "Experience deleted" });
+});

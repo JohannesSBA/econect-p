@@ -63,46 +63,41 @@ export async function POST(req: NextRequest) {
         : null
   if (!normalizedRole) return NextResponse.json({ error: 'Invalid account type' }, { status: 400 })
 
-  // 3) Create the user
+  // 3) Create the user + profile atomically
   const hashed = await hashPassword(password)
-  const user = await prisma.user.create({
-    data: {
-      name:        firstName + ' ' + lastName,
-      email,
-      phone:       phone,
-      role:        normalizedRole,
-      password:    hashed,
-    },
-  })
-  if (normalizedRole === 'EMPLOYER') {
-    await prisma.employerProfile.create({
+  const user = await prisma.$transaction(async (tx) => {
+    const newUser = await tx.user.create({
       data: {
-        userId: user.id,
-        companyName: companyName || firstName + ' ' + lastName,
-        website: website || null,
+        name:     firstName + ' ' + lastName,
+        email,
+        phone,
+        role:     normalizedRole,
+        password: hashed,
       },
     })
-  } else {
-    await prisma.jobSeekerProfile.create({
-    data: {
-      bio: '',
-      jobSeeker: {
-        connect: {
-          id: user.id,
+
+    if (normalizedRole === 'EMPLOYER') {
+      await tx.employerProfile.create({
+        data: {
+          userId:      newUser.id,
+          companyName: companyName || firstName + ' ' + lastName,
+          website:     website || null,
         },
-      },
-      education: {
-        create: [],
-      },
-      experiences: {
-        create: [],
-      },
-      skills: {
-        create: [],
-      },
-    },
+      })
+    } else {
+      await tx.jobSeekerProfile.create({
+        data: {
+          bio:      '',
+          jobSeeker: { connect: { id: newUser.id } },
+          education:   { create: [] },
+          experiences: { create: [] },
+          skills:      { create: [] },
+        },
+      })
+    }
+
+    return newUser
   })
-  }
 
   // 4) Clear the cookie & return success
   const clearCookie = `econnect_otp=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; Secure; SameSite=Strict`

@@ -1,36 +1,35 @@
+import { NextRequest, NextResponse } from "next/server";
+
+import { withHandler } from "@/lib/api";
+import { requireUser } from "@/lib/auth";
+import { HttpError } from "@/lib/errors";
 import prisma from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { NextResponse } from "next/server";
-import { authOptions } from "../../auth/[...nextauth]/options";
-import { Session } from "next-auth";
-export async function POST(request: Request) {
-  const body = await request.json()
-  const session = await getServerSession(authOptions) as Session
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+import { experienceSchema } from "@/lib/validation/users";
 
-  // Include the profile's own `id`
+export const POST = withHandler(async (req: NextRequest) => {
+  const user = await requireUser();
+
+  const parsed = experienceSchema.parse(await req.json());
+
   const userWithProfile = await prisma.user.findUnique({
-    where: { id: session.user?.id as string },
-    include: {
-      profile: {
-        select: { id: true }
-      }
-    }
-  })
+    where: { id: user.id },
+    include: { profile: { select: { id: true } } },
+  });
 
-  if (!userWithProfile?.profile) {
-    return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
-  }
+  if (!userWithProfile?.profile) throw new HttpError(404, "Profile not found");
 
   const experience = await prisma.experience.create({
     data: {
-      ...body,
-      jobSeekerProfile: {
-        // <<< CONNECT TO THE PROFILE.ID, NOT THE USER.ID
-        connect: { id: userWithProfile.profile.id }
-      }
-    }
-  })
+      title: parsed.title,
+      company: parsed.company,
+      location: parsed.location ?? null,
+      startDate: parsed.startDate,
+      endDate: parsed.endDate ?? null,
+      current: parsed.current ?? false,
+      description: parsed.description ?? null,
+      jobSeekerProfile: { connect: { id: userWithProfile.profile.id } },
+    },
+  });
 
-  return NextResponse.json({ message: 'Experience added', experience })
-}
+  return NextResponse.json({ message: "Experience added", experience }, { status: 201 });
+});

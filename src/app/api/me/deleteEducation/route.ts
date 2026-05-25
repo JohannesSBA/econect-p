@@ -1,30 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+
+import { withHandler } from "@/lib/api";
+import { requireUser } from "@/lib/auth";
+import { HttpError } from "@/lib/errors";
 import prisma from "@/lib/prisma";
-import { authOptions } from "../../auth/[...nextauth]/options";
 
-export async function DELETE(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const id = searchParams.get("id");
+export const DELETE = withHandler(async (req: NextRequest) => {
+  const user = await requireUser();
 
-  if (!id) {
-    return NextResponse.json({ error: "ID is required" }, { status: 400 });
-  }
+  const id = new URL(req.url).searchParams.get("id");
+  if (!id) throw new HttpError(400, "ID is required");
 
-  const session = await getServerSession(authOptions);
-
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const userId = session?.user?.id;
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const _education = await prisma.education.delete({
-    where: { id: id }
+  const education = await prisma.education.findUnique({
+    where: { id },
+    include: { jobSeekerProfile: { select: { userId: true } } },
   });
 
-  return NextResponse.json({ message: "Education deleted" }, { status: 200 });
-}
+  if (!education) throw new HttpError(404, "Education not found");
+  if (education.jobSeekerProfile?.userId !== user.id) throw new HttpError(403, "Forbidden");
+
+  await prisma.education.delete({ where: { id } });
+
+  return NextResponse.json({ message: "Education deleted" });
+});

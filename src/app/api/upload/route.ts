@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { withHandler } from "@/lib/api";
 import { requireUser } from "@/lib/auth";
 import { HttpError } from "@/lib/errors";
+import { rateLimit } from "@/lib/rateLimiter";
 import { uploadImage, uploadResume, uploadCoverLetter } from "@/lib/s3-upload";
 import {
   uploadTypeSchema,
@@ -11,6 +12,9 @@ import {
 } from "@/lib/validation/uploads";
 
 export const POST = withHandler(async (req: NextRequest) => {
+  const rl = rateLimit(req, "upload", 20, 60 * 1000);
+  if (!rl.allowed) throw new HttpError(429, `Too many uploads. Retry in ${rl.retryAfterSeconds}s.`);
+
   const user = await requireUser();
 
   const formData = await req.formData();

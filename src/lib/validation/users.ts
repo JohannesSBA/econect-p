@@ -1,5 +1,31 @@
 import { z } from "zod";
 
+export const updateProfileSchema = z.object({
+  name: z.string().min(1).max(120).optional(),
+  headline: z.string().max(200).optional(),
+  location: z.string().max(120).optional(),
+  website: z.string().url().or(z.literal("")).optional(),
+  image: z.string().url().or(z.literal("")).optional(),
+});
+
+export const updateAboutSchema = z.object({
+  about: z.string().max(2000),
+});
+
+export const experienceSchema = z.object({
+  title: z.string().min(1).max(120),
+  company: z.string().min(1).max(120),
+  location: z.string().max(120).optional(),
+  startDate: z.string().min(1),
+  endDate: z.string().optional().nullable(),
+  current: z.boolean().optional().default(false),
+  description: z.string().max(2000).optional().nullable(),
+});
+
+export const onlineStatusSchema = z.object({
+  isOnline: z.boolean(),
+});
+
 export const profileImageSchema = z.object({
   imageUrl: z.union([z.string().url("Must be a valid URL"), z.literal("")]),
 });

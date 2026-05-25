@@ -1,67 +1,41 @@
-import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/app/api/auth/[...nextauth]/options"
-import prisma from "@/lib/prisma"
+import { NextRequest, NextResponse } from "next/server";
 
-// POST /api/posts/[id]/like - Like/unlike a post
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+import { withHandler } from "@/lib/api";
+import { requireUser } from "@/lib/auth";
+import { HttpError } from "@/lib/errors";
+import prisma from "@/lib/prisma";
+import { rateLimit } from "@/lib/rateLimiter";
 
-    const { id: postId } = await params
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email }
-    })
+type Ctx = { params: Promise<{ id: string }> };
 
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
-    }
+export const POST = withHandler(async (req: NextRequest, ctx?: Ctx) => {
+  const rl = rateLimit(req, "posts:like", 60, 60 * 1000);
+  if (!rl.allowed) throw new HttpError(429, `Too many requests. Retry in ${rl.retryAfterSeconds}s.`);
 
-    // Check if user already liked the post
-    const existingLike = await prisma.like.findFirst({
-      where: {
-        userId: user.id,
-        postId: postId
-      }
-    })
+  const user = await requireUser();
+  const { id: postId } = await ctx!.params;
 
-    if (existingLike) {
-      // Unlike the post
-      await prisma.like.delete({
-        where: { id: existingLike.id }
-      })
-      return NextResponse.json({ liked: false })
-    } else {
-      // Like the post
-      const like = await prisma.like.create({
-        data: {
-          userId: user.id,
-          postId: postId
-        }
-      })
-      // Notify post author
-      const post = await prisma.post.findUnique({ where: { id: postId } })
-      if (post && post.authorId !== user.id) {
-        await prisma.notification.create({
-          data: {
-            userId: post.authorId,
-            type: 'LIKE',
-            title: 'New like on your post',
-            message: `${user.name} liked your post`,
-            data: { postId, likerId: user.id, likeId: like.id },
-          }
-        })
-      }
-      return NextResponse.json({ liked: true })
-    }
-  } catch (error) {
-    console.error("Error toggling like:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  const existing = await prisma.like.findFirst({ where: { userId: user.id, postId } });
+
+  if (existing) {
+    await prisma.like.delete({ where: { id: existing.id } });
+    return NextResponse.json({ liked: false });
   }
-}
+
+  const like = await prisma.like.create({ data: { userId: user.id, postId } });
+
+  const post = await prisma.post.findUnique({ where: { id: postId } });
+  if (post && post.authorId !== user.id) {
+    await prisma.notification.create({
+      data: {
+        userId: post.authorId,
+        type: "LIKE",
+        title: "New like on your post",
+        message: `${user.name} liked your post`,
+        data: { postId, likerId: user.id, likeId: like.id },
+      },
+    });
+  }
+
+  return NextResponse.json({ liked: true });
+});
