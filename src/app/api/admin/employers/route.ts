@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import prisma from "@/lib/prisma";
-import { Prisma } from "@/generated/prisma";
 import { requireAdminUser } from "@/lib/adminAuth";
+import { getRequestLogger } from "@/lib/logger";
+import { listEmployers, updateEmployers } from "@/services/adminEmployers";
 
 const DEFAULT_PAGE_SIZE = 10;
 
 export async function GET(req: NextRequest) {
+  const logger = getRequestLogger(req, { route: "api:admin:employers" });
   try {
     await requireAdminUser();
   } catch (response) {
@@ -23,45 +24,18 @@ export async function GET(req: NextRequest) {
     Math.max(1, Number(searchParams.get("pageSize") ?? DEFAULT_PAGE_SIZE)),
   );
 
-  const where: Prisma.EmployerProfileWhereInput = {};
-  if (status === "pending") {
-    where.isVerified = false;
-  } else if (status === "verified") {
-    where.isVerified = true;
-  }
-  if (search) {
-    where.OR = [
-      { companyName: { contains: search, mode: "insensitive" } },
-      { user: { name: { contains: search, mode: "insensitive" } } },
-      { user: { email: { contains: search, mode: "insensitive" } } },
-    ];
-  }
-
-  const [employers, total] = await Promise.all([
-    prisma.employerProfile.findMany({
-      where,
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-          },
-        },
-        verifiedBy: { select: { id: true, name: true, email: true } },
-      },
-      orderBy: { createdAt: "desc" },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    }),
-    prisma.employerProfile.count({ where }),
-  ]);
+  const { employers, total } = await listEmployers({
+    search,
+    status: status as "pending" | "verified" | "all",
+    page,
+    pageSize,
+  });
 
   return NextResponse.json({ employers, page, pageSize, total });
 }
 
 export async function PATCH(req: NextRequest) {
+  const logger = getRequestLogger(req, { route: "api:admin:employers" });
   const admin = await requireAdminUser();
   if (admin instanceof NextResponse) return admin;
 
@@ -95,50 +69,16 @@ export async function PATCH(req: NextRequest) {
     }
 
     const now = new Date();
-    const updates = await prisma.$transaction(
-      ids.map((id) => {
-        switch (action) {
-          case "verify":
-            return prisma.employerProfile.update({
-              where: { id },
-              data: {
-                isVerified: true,
-                verifiedAt: now,
-                verifiedById: admin.id,
-                verificationNote: reason || null,
-              },
-              include: { user: { select: { id: true, name: true, email: true } } },
-            });
-          case "suspend":
-            return prisma.employerProfile.update({
-              where: { id },
-              data: {
-                isVerified: false,
-                verifiedAt: now,
-                verifiedById: admin.id,
-                verificationNote: reason,
-              },
-              include: { user: { select: { id: true, name: true, email: true } } },
-            });
-          default:
-            throw new Error("Unknown action");
-        }
-      }),
-    );
-
-    await prisma.adminAuditLog.createMany({
-      data: ids.map((id) => ({
-        actorId: admin.id,
-        action: `EMPLOYER_${action.toUpperCase()}`,
-        targetType: "employerProfile",
-        targetId: id,
-        details: reason ? JSON.stringify({ reason }) : undefined,
-      })),
+    const updates = await updateEmployers({
+      adminId: admin.id,
+      ids,
+      action,
+      reason,
     });
 
     return NextResponse.json({ success: true, profiles: updates });
   } catch (error) {
-    console.error(error);
+    logger.error("Unable to update employer(s)", { error });
     return NextResponse.json(
       { error: "Unable to update employer(s). Please try again." },
       { status: 500 },

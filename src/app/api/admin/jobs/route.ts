@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import prisma from "@/lib/prisma";
-import { JobStatus, Prisma } from "@/generated/prisma";
+import { JobStatus } from "@/generated/prisma";
 import { requireAdminUser } from "@/lib/adminAuth";
+import { getRequestLogger } from "@/lib/logger";
+import { listJobs, updateJobs } from "@/services/adminJobs";
 
 const DEFAULT_PAGE_SIZE = 10;
 
 export async function GET(req: NextRequest) {
+  const logger = getRequestLogger(req, { route: "api:admin:jobs" });
   try {
     await requireAdminUser();
   } catch (response) {
@@ -25,34 +27,15 @@ export async function GET(req: NextRequest) {
     Math.max(1, Number(searchParams.get("pageSize") ?? DEFAULT_PAGE_SIZE)),
   );
 
-  const where: Prisma.JobListingWhereInput = {};
-  if (statusParam && statusParam !== "all") {
-    where.status = statusParam;
-  }
-  if (search) {
-    where.OR = [
-      { title: { contains: search, mode: "insensitive" } },
-      { company: { contains: search, mode: "insensitive" } },
-      { location: { contains: search, mode: "insensitive" } },
-    ];
-  }
-
-  const [pendingJobs, total] = await Promise.all([
-    prisma.jobListing.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-      include: {
-        employer: { select: { id: true, name: true, email: true } },
-        reviewedBy: { select: { id: true, name: true, email: true } },
-      },
-    }),
-    prisma.jobListing.count({ where }),
-  ]);
+  const { jobs, total } = await listJobs({
+    search,
+    status: statusParam,
+    page,
+    pageSize,
+  });
 
   return NextResponse.json({
-    jobs: pendingJobs,
+    jobs,
     page,
     pageSize,
     total,
@@ -60,6 +43,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  const logger = getRequestLogger(req, { route: "api:admin:jobs" });
   const admin = await requireAdminUser();
   if (admin instanceof NextResponse) return admin;
 
@@ -92,70 +76,16 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    const now = new Date();
-    const updates = await prisma.$transaction(
-      ids.map((id) => {
-        switch (action) {
-          case "approve":
-            return prisma.jobListing.update({
-              where: { id },
-              data: {
-                status: JobStatus.OPEN,
-                isPublished: true,
-                publishedAt: now,
-                reviewedAt: now,
-                reviewedById: admin.id,
-                reviewNote: reason || null,
-              },
-            });
-          case "reject":
-            return prisma.jobListing.update({
-              where: { id },
-              data: {
-                status: JobStatus.PAUSED,
-                isPublished: false,
-                reviewedAt: now,
-                reviewedById: admin.id,
-                reviewNote: reason,
-              },
-            });
-          case "feature":
-            return prisma.jobListing.update({
-              where: { id },
-              data: {
-                isFeatured: true,
-                reviewedAt: now,
-                reviewedById: admin.id,
-              },
-            });
-          case "unfeature":
-            return prisma.jobListing.update({
-              where: { id },
-              data: {
-                isFeatured: false,
-                reviewedAt: now,
-                reviewedById: admin.id,
-              },
-            });
-          default:
-            throw new Error("Unknown action");
-        }
-      }),
-    );
-
-    await prisma.adminAuditLog.createMany({
-      data: ids.map((id) => ({
-        actorId: admin.id,
-        action: `JOB_${action.toUpperCase()}`,
-        targetType: "job",
-        targetId: id,
-        details: reason ? JSON.stringify({ reason }) : undefined,
-      })),
+    const updates = await updateJobs({
+      adminId: admin.id,
+      ids,
+      action,
+      reason,
     });
 
     return NextResponse.json({ success: true, jobs: updates });
   } catch (error) {
-    console.error(error);
+    logger.error("Unable to update jobs", { error });
     return NextResponse.json(
       { error: "Unable to update jobs. Please try again." },
       { status: 500 },

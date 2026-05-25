@@ -1,76 +1,24 @@
-import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import { publishedJobWhere } from "@/lib/jobFilters";
 
-const paidListingFilter = {
-  ...publishedJobWhere,
-};
+import { getRequestLogger } from "@/lib/logger";
+import { getLandingJobs } from "@/services/jobs";
 
 export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const search = searchParams.get("search");
+  const logger = getRequestLogger(request, { route: "api:jobs:landing" });
 
-    console.log(request.url);
-    const { searchParams } = new URL(request.url);
-    const search = searchParams.get('search');
-
-    console.log(search);
-
-    if (search) {
-        try {
-            const jobs = await prisma.jobListing.findMany({
-                where: {
-                    ...paidListingFilter,
-                    title: {
-                        contains: search,
-                        mode: 'insensitive'
-                    }
-                },
-                orderBy: {
-                    createdAt: 'desc'
-                },
-                take: 3,
-                select: {
-                    id: true,
-                    title: true,
-                    company: true,
-                    location: true,
-                    salary: true,
-                    createdAt: true
-                }
-            });
-
-            return NextResponse.json(jobs);
-        } catch (error) {
-            console.error('Error fetching jobs:', error);
-            return NextResponse.json(
-                { error: 'Failed to fetch job listings' },
-                { status: 500 }
-            );
-        }
-    }
-
-    try {
-        const jobs = await prisma.jobListing.findMany({
-            where: paidListingFilter,
-            orderBy: {
-        createdAt: 'desc',
-      },
-      take: 3,
-      select: {
-        id: true,
-        title: true,
-        company: true,
-        location: true,
-        salary: true,
-        createdAt: true,
-      },
+  try {
+    const jobs = await getLandingJobs({
+      search,
+      logger,
     });
-
     return NextResponse.json(jobs);
   } catch (error) {
-    console.error('Error fetching jobs:', error);
+    logger.error("Failed to fetch job listings", { error, search: search ?? "" });
     return NextResponse.json(
-      { error: 'Failed to fetch job listings' },
-      { status: 500 }
+      { error: "Failed to fetch job listings" },
+      { status: 500 },
     );
   }
 }

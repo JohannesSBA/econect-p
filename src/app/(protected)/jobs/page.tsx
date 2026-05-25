@@ -5,7 +5,7 @@ import Header from "../components/Header";
 import { getCurrentUser } from "@/lib/getCurrentUser";
 import { User } from "@/../types/prisma";
 import prisma from "@/lib/prisma";
-import JobsPageClient from "./components/JobsPageClient";
+import { JobsPageClient } from "@/features/jobs";
 import { publishedJobWhere } from "@/lib/jobFilters";
 
 export default async function JobsPage() {

@@ -4,16 +4,18 @@ import { getCurrentUser } from "@/lib/getCurrentUser";
 import prisma from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AnalyticsChart } from "./components/AnalyticsChart";
-import { AdminUserTable } from "./components/AdminUserTable";
-import { RoleDistributionCard } from "./components/RoleDistributionCard";
-import { ModerationPanel } from "./components/ModerationPanel";
-import { JobsPanel } from "./components/JobsPanel";
-import { PaymentsPanel } from "./components/PaymentsPanel";
+import {
+  AdminUserTable,
+  AnalyticsChart,
+  JobsPanel,
+  ModerationPanel,
+  PaymentsPanel,
+  RoleDistributionCard,
+} from "@/features/admin";
+import { formatCurrency } from "@/features/admin/utils";
 import { Activity, MessageSquare, ShieldCheck, Wallet } from "lucide-react";
 import { User } from "@/../types/prisma";
 import { Prisma, JobStatus } from "@/generated/prisma";
-import { formatCurrency } from "./utils";
 
 type MonthlySnapshot = {
   label: string;

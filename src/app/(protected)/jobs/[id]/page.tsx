@@ -20,7 +20,7 @@ import { getCurrentUser } from "@/lib/getCurrentUser";
 import { User } from "@/../types/prisma";
 import prisma from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import JobApplicationForm from "./components/JobApplicationForm";
+import { JobApplicationForm } from "@/features/jobs";
 import { getCompanyLogoUrl } from "@/lib/image-utils";
 import { publishedJobWhere } from "@/lib/jobFilters";
 

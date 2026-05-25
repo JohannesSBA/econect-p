@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 
-import { formatCurrency } from "../utils";
+import { formatCurrency } from "@/features/admin/utils";
 
 type PaymentEntry = {
   id: string;

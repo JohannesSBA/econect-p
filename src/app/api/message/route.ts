@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { performance } from "perf_hooks";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import prisma from "@/lib/prisma";
+import { sendMessageSchema, threadQuerySchema } from "@/lib/validation/messages";
 
 async function traceQuery<T>(label: string, fn: () => Promise<T>): Promise<T> {
   const start = performance.now();
@@ -19,8 +20,11 @@ export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { searchParams } = new URL(req.url);
-  const userId = searchParams.get("userId");
-  if (!userId) return NextResponse.json({ error: "userId is required" }, { status: 400 });
+  const parsed = threadQuerySchema.safeParse({ userId: searchParams.get("userId") });
+  if (!parsed.success) {
+    return NextResponse.json({ error: "userId is required" }, { status: 400 });
+  }
+  const { userId } = parsed.data;
   const user = await traceQuery("message:getUserByEmail", () =>
     prisma.user.findUnique({ where: { email: session.user.email ?? undefined } }),
   );
@@ -45,14 +49,14 @@ export async function POST(req: NextRequest) {
   const user = await prisma.user.findUnique({ where: { email: session.user.email } });
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
   
-  const { text, chatId, chatPartner, attachments, replyTo } = await req.json();
-  
+  const parsed = sendMessageSchema.safeParse(await req.json());
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid message payload" }, { status: 400 });
+  }
+  const { text, chatId, chatPartner, attachments, replyTo } = parsed.data;
+
   if ((!text || !text.trim()) && (!attachments || attachments.length === 0)) {
     return NextResponse.json({ error: "Message text or attachments are required" }, { status: 400 });
-  }
-
-  if (!chatId || !chatPartner) {
-    return NextResponse.json({ error: "chatId and chatPartner are required" }, { status: 400 });
   }
 
   // Verify that the users are connected, unless exceptions apply
@@ -161,13 +165,13 @@ export async function POST(req: NextRequest) {
             data: {
               messageId: message.id,
               uploadedById: user.id,
-              type: attachment.type,
-              url: attachment.url,
-              filename: attachment.filename,
-              size: attachment.size,
-              mimeType: attachment.mimeType,
-              thumbnail: attachment.thumbnail,
-              duration: attachment.duration,
+              type: attachment.type || "file",
+              url: attachment.url || "",
+              filename: attachment.filename || "",
+              size: attachment.size ?? 0,
+              mimeType: attachment.mimeType || "",
+              thumbnail: attachment.thumbnail || undefined,
+              duration: attachment.duration ?? null,
             }
           }),
         );

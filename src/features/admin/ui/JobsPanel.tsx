@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { CheckCircle, Factory, Loader2, Star, StarOff, XCircle } from "lucide-react";
 
@@ -16,6 +16,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 type JobStatusFilter = "UNDER_REVIEW" | "OPEN" | "PAUSED" | "CLOSED" | "all";
 type EmployerStatusFilter = "pending" | "verified" | "all";
@@ -110,6 +122,22 @@ export function JobsPanel({ pendingJobs, pendingEmployers }: JobsPanelProps) {
   const [selectedEmployers, setSelectedEmployers] = useState<Set<string>>(
     new Set(),
   );
+  const [jobsSelectAllPages, setJobsSelectAllPages] = useState(false);
+  const [employersSelectAllPages, setEmployersSelectAllPages] = useState(false);
+  const [selectingAllJobs, setSelectingAllJobs] = useState(false);
+  const [selectingAllEmployers, setSelectingAllEmployers] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmReason, setConfirmReason] = useState("");
+  const [pendingConfirm, setPendingConfirm] = useState<
+    | {
+        type: "job" | "employer";
+        action: "approve" | "reject" | "feature" | "unfeature" | "verify" | "suspend";
+        ids: string[];
+        requireReason: boolean;
+        label: string;
+      }
+    | null
+  >(null);
 
   const jobPages = Math.max(1, Math.ceil(jobTotal / JOB_PAGE_SIZE));
   const employerPages = Math.max(
@@ -122,6 +150,7 @@ export function JobsPanel({ pendingJobs, pendingEmployers }: JobsPanelProps) {
       (prev) =>
         new Set([...prev].filter((id) => jobs.some((job) => job.id === id))),
     );
+    setJobsSelectAllPages(false);
   }, [jobs]);
 
   useEffect(() => {
@@ -133,6 +162,7 @@ export function JobsPanel({ pendingJobs, pendingEmployers }: JobsPanelProps) {
           ),
         ),
     );
+    setEmployersSelectAllPages(false);
   }, [employers]);
 
   const loadJobs = useCallback(
@@ -157,6 +187,13 @@ export function JobsPanel({ pendingJobs, pendingEmployers }: JobsPanelProps) {
           console.error(error);
           toast.error(
             error instanceof Error ? error.message : "Unable to fetch jobs",
+            {
+              description: "Retry with the current filters.",
+              action: {
+                label: "Retry",
+                onClick: () => loadJobs(),
+              },
+            },
           );
         }
       } finally {
@@ -193,6 +230,13 @@ export function JobsPanel({ pendingJobs, pendingEmployers }: JobsPanelProps) {
             error instanceof Error
               ? error.message
               : "Unable to fetch employers",
+            {
+              description: "Retry with the current filters.",
+              action: {
+                label: "Retry",
+                onClick: () => loadEmployers(),
+              },
+            },
           );
         }
       } finally {
@@ -226,36 +270,15 @@ export function JobsPanel({ pendingJobs, pendingEmployers }: JobsPanelProps) {
     };
   }, [loadEmployers]);
 
-  const confirmAction = (
-    label: string,
-    requireReason = false,
-  ): { confirmed: boolean; reason?: string } => {
-    const confirmed = window.confirm(label);
-    if (!confirmed) return { confirmed: false };
-    if (requireReason) {
-      const reason = window.prompt("Add a short reason (required)")?.trim();
-      if (!reason) {
-        toast.error("A reason is required.");
-        return { confirmed: false };
-      }
-      return { confirmed: true, reason };
-    }
-    return { confirmed: true };
-  };
-
   const runJobAction = async (
     ids: string[],
     action: "approve" | "reject" | "feature" | "unfeature",
+    reason?: string,
   ) => {
     if (!ids.length) {
       toast.error("Select at least one job.");
       return;
     }
-    const { confirmed, reason } = confirmAction(
-      `Proceed to ${action} ${ids.length} job${ids.length > 1 ? "s" : ""}?`,
-      action === "reject",
-    );
-    if (!confirmed) return;
 
     setPendingAction(`job:${action}`);
     try {
@@ -268,12 +291,19 @@ export function JobsPanel({ pendingJobs, pendingEmployers }: JobsPanelProps) {
       if (!res.ok) throw new Error(data.error || "Unable to update jobs");
       toast.success("Jobs updated");
       setSelectedJobs(new Set());
+      setJobsSelectAllPages(false);
       await loadJobs();
     } catch (error) {
       console.error(error);
-      toast.error(
-        error instanceof Error ? error.message : "Unable to update jobs",
-      );
+      const message =
+        error instanceof Error ? error.message : "Unable to update jobs";
+      toast.error(message, {
+        description: "Retry with the current selection.",
+        action: {
+          label: "Retry",
+          onClick: () => runJobAction(ids, action, reason),
+        },
+      });
     } finally {
       setPendingAction(null);
     }
@@ -282,16 +312,12 @@ export function JobsPanel({ pendingJobs, pendingEmployers }: JobsPanelProps) {
   const runEmployerAction = async (
     ids: string[],
     action: "verify" | "suspend",
+    reason?: string,
   ) => {
     if (!ids.length) {
       toast.error("Select at least one employer.");
       return;
     }
-    const { confirmed, reason } = confirmAction(
-      `Proceed to ${action} ${ids.length} employer${ids.length > 1 ? "s" : ""}?`,
-      action === "suspend",
-    );
-    if (!confirmed) return;
 
     setPendingAction(`employer:${action}`);
     try {
@@ -308,14 +334,21 @@ export function JobsPanel({ pendingJobs, pendingEmployers }: JobsPanelProps) {
       if (!res.ok) throw new Error(data.error || "Unable to update employers");
       toast.success("Employers updated");
       setSelectedEmployers(new Set());
+      setEmployersSelectAllPages(false);
       await loadEmployers();
     } catch (error) {
       console.error(error);
-      toast.error(
+      const message =
         error instanceof Error
           ? error.message
-          : "Unable to update employers",
-      );
+          : "Unable to update employers";
+      toast.error(message, {
+        description: "Retry with the current selection.",
+        action: {
+          label: "Retry",
+          onClick: () => runEmployerAction(ids, action, reason),
+        },
+      });
     } finally {
       setPendingAction(null);
     }
@@ -328,6 +361,7 @@ export function JobsPanel({ pendingJobs, pendingEmployers }: JobsPanelProps) {
         next.add(id);
       } else {
         next.delete(id);
+        setJobsSelectAllPages(false);
       }
       return next;
     });
@@ -340,9 +374,161 @@ export function JobsPanel({ pendingJobs, pendingEmployers }: JobsPanelProps) {
         next.add(id);
       } else {
         next.delete(id);
+        setEmployersSelectAllPages(false);
       }
       return next;
     });
+  };
+
+  const collectAllJobIds = useCallback(async () => {
+    const params = new URLSearchParams();
+    if (jobSearch) params.set("q", jobSearch);
+    if (jobStatus !== "all") params.set("status", jobStatus);
+
+    const ids: string[] = [];
+    let page = 1;
+    const pageSize = 50;
+    let total = jobTotal;
+    while (ids.length < total) {
+      params.set("page", String(page));
+      params.set("pageSize", String(pageSize));
+      const res = await fetch(`/api/admin/jobs?${params.toString()}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Unable to fetch all jobs");
+      ids.push(...(data.jobs ?? []).map((job: PendingJob) => job.id));
+      total = data.total ?? total;
+      if ((data.jobs ?? []).length < pageSize) break;
+      page += 1;
+    }
+    return ids;
+  }, [jobSearch, jobStatus, jobTotal]);
+
+  const collectAllEmployerIds = useCallback(async () => {
+    const params = new URLSearchParams();
+    if (employerSearch) params.set("q", employerSearch);
+    if (employerStatus !== "all") params.set("status", employerStatus);
+
+    const ids: string[] = [];
+    let page = 1;
+    const pageSize = 50;
+    let total = employerTotal;
+    while (ids.length < total) {
+      params.set("page", String(page));
+      params.set("pageSize", String(pageSize));
+      const res = await fetch(`/api/admin/employers?${params.toString()}`);
+      const data = await res.json();
+      if (!res.ok)
+        throw new Error(data.error || "Unable to fetch all employers");
+      ids.push(
+        ...(data.employers ?? []).map(
+          (employer: PendingEmployer) => employer.id,
+        ),
+      );
+      total = data.total ?? total;
+      if ((data.employers ?? []).length < pageSize) break;
+      page += 1;
+    }
+    return ids;
+  }, [employerSearch, employerStatus, employerTotal]);
+
+  const startConfirm = (
+    type: "job" | "employer",
+    action: "approve" | "reject" | "feature" | "unfeature" | "verify" | "suspend",
+    ids: string[],
+    requireReason: boolean,
+    label: string,
+  ) => {
+    setConfirmReason("");
+    setPendingConfirm({ type, action, ids, requireReason, label });
+    setConfirmOpen(true);
+  };
+
+  const performConfirmedAction = async () => {
+    if (!pendingConfirm) return;
+    const reason = pendingConfirm.requireReason ? confirmReason.trim() : undefined;
+    if (pendingConfirm.requireReason && !reason) {
+      toast.error("A short reason is required.");
+      return;
+    }
+    setConfirmOpen(false);
+    if (pendingConfirm.type === "job") {
+      await runJobAction(pendingConfirm.ids, pendingConfirm.action as any, reason);
+    } else {
+      await runEmployerAction(
+        pendingConfirm.ids,
+        pendingConfirm.action as any,
+        reason,
+      );
+    }
+  };
+
+  const selectedJobsCount = jobsSelectAllPages
+    ? jobTotal
+    : selectedJobs.size;
+  const selectedEmployersCount = employersSelectAllPages
+    ? employerTotal
+    : selectedEmployers.size;
+
+  const jobFiltersSummary = useMemo(
+    () =>
+      jobStatus === "all"
+        ? "All statuses"
+        : jobStatus.replace("_", " ").toLowerCase(),
+    [jobStatus],
+  );
+
+  const employerFiltersSummary = useMemo(
+    () =>
+      employerStatus === "all"
+        ? "All employers"
+        : employerStatus === "pending"
+          ? "Pending verification"
+        : "Verified",
+    [employerStatus],
+  );
+
+  const selectAllJobsAcrossPages = async () => {
+    setSelectingAllJobs(true);
+    try {
+      const ids = await collectAllJobIds();
+      setSelectedJobs(new Set(ids));
+      setJobsSelectAllPages(true);
+      toast.success(`Selected all ${ids.length} jobs`);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unable to select all jobs";
+      toast.error(message, {
+        action: {
+          label: "Retry",
+          onClick: () => selectAllJobsAcrossPages(),
+        },
+      });
+    } finally {
+      setSelectingAllJobs(false);
+    }
+  };
+
+  const selectAllEmployersAcrossPages = async () => {
+    setSelectingAllEmployers(true);
+    try {
+      const ids = await collectAllEmployerIds();
+      setSelectedEmployers(new Set(ids));
+      setEmployersSelectAllPages(true);
+      toast.success(`Selected all ${ids.length} employers`);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Unable to select all employers";
+      toast.error(message, {
+        action: {
+          label: "Retry",
+          onClick: () => selectAllEmployersAcrossPages(),
+        },
+      });
+    } finally {
+      setSelectingAllEmployers(false);
+    }
   };
 
   const renderPagination = (
@@ -391,7 +577,12 @@ export function JobsPanel({ pendingJobs, pendingEmployers }: JobsPanelProps) {
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
-        <section className="space-y-3">
+        <section
+          className="space-y-3"
+          role="region"
+          aria-label="Employer verification panel"
+          aria-busy={employersLoading}
+        >
           <div className="flex flex-wrap items-center justify-between gap-2 text-sm font-semibold text-slate-700">
             <div className="flex items-center gap-2">
               <Factory className="h-4 w-4 text-blue-500" />
@@ -408,7 +599,13 @@ export function JobsPanel({ pendingJobs, pendingEmployers }: JobsPanelProps) {
                   employersBusy || selectedEmployers.size === 0
                 }
                 onClick={() =>
-                  runEmployerAction(Array.from(selectedEmployers), "verify")
+                  startConfirm(
+                    "employer",
+                    "verify",
+                    Array.from(selectedEmployers),
+                    false,
+                    `Verify ${selectedEmployersCount} employer(s)?`,
+                  )
                 }
               >
                 <CheckCircle className="mr-1 h-3.5 w-3.5" />
@@ -421,7 +618,13 @@ export function JobsPanel({ pendingJobs, pendingEmployers }: JobsPanelProps) {
                   employersBusy || selectedEmployers.size === 0
                 }
                 onClick={() =>
-                  runEmployerAction(Array.from(selectedEmployers), "suspend")
+                  startConfirm(
+                    "employer",
+                    "suspend",
+                    Array.from(selectedEmployers),
+                    true,
+                    `Suspend ${selectedEmployersCount} employer(s)?`,
+                  )
                 }
               >
                 <XCircle className="mr-1 h-3.5 w-3.5" />
@@ -429,50 +632,87 @@ export function JobsPanel({ pendingJobs, pendingEmployers }: JobsPanelProps) {
               </Button>
             </div>
           </div>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <Input
-              placeholder="Search company or owner email"
-              value={employerSearch}
-              onChange={(event) => {
-                setEmployerSearch(event.target.value);
-                setEmployerPage(1);
-              }}
-              className="w-full"
-            />
-            <Select
-              value={employerStatus}
-              onValueChange={(value) => {
-                setEmployerStatus(value as EmployerStatusFilter);
-                setEmployerPage(1);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="verified">Verified</SelectItem>
-                <SelectItem value="all">All</SelectItem>
-              </SelectContent>
-            </Select>
-            <div className="flex items-center gap-2 text-xs text-slate-500">
-              <Checkbox
-                checked={
-                  employers.length > 0 &&
-                  selectedEmployers.size === employers.length
-                }
-                onCheckedChange={(checked) =>
-                  setSelectedEmployers(
-                    checked
-                      ? new Set(employers.map((employer) => employer.id))
-                      : new Set(),
-                  )
-                }
+          <div className="grid gap-3 sm:grid-cols-3" role="group" aria-label="Employer filters">
+            <div className="space-y-1">
+              <Label htmlFor="employer-search" className="text-xs text-slate-600">
+                Search companies or owners
+              </Label>
+              <Input
+                id="employer-search"
+                placeholder="Search company or owner email"
+                value={employerSearch}
+                onChange={(event) => {
+                  setEmployerSearch(event.target.value);
+                  setEmployerPage(1);
+                  setEmployersSelectAllPages(false);
+                  setSelectedEmployers(new Set());
+                }}
+                className="w-full"
               />
-              <span>Select all on page</span>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="employer-status" className="text-xs text-slate-600">
+                Status
+              </Label>
+              <Select
+                value={employerStatus}
+                onValueChange={(value) => {
+                  setEmployerStatus(value as EmployerStatusFilter);
+                  setEmployerPage(1);
+                  setEmployersSelectAllPages(false);
+                  setSelectedEmployers(new Set());
+                }}
+              >
+                <SelectTrigger id="employer-status" aria-label="Employer status filter">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="verified">Verified</SelectItem>
+                  <SelectItem value="all">All</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-[0.7rem] text-slate-500">
+                {employerFiltersSummary}
+              </p>
+            </div>
+            <div className="flex flex-col justify-end gap-2 text-xs text-slate-500">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  aria-label="Select all employers on this page"
+                  checked={
+                    employers.length > 0 &&
+                    selectedEmployers.size === employers.length &&
+                    !employersSelectAllPages
+                  }
+                  onCheckedChange={(checked) => {
+                    setEmployersSelectAllPages(false);
+                    setSelectedEmployers(
+                      checked
+                        ? new Set(employers.map((employer) => employer.id))
+                        : new Set(),
+                    );
+                  }}
+                />
+                <span>Select page ({employers.length})</span>
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={selectingAllEmployers || employerTotal === 0}
+                onClick={selectAllEmployersAcrossPages}
+              >
+                {selectingAllEmployers ? (
+                  <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                ) : null}
+                Select all results ({employerTotal})
+              </Button>
+              <span className="text-[0.7rem] text-slate-500">
+                Selected {selectedEmployersCount} of {employerTotal}
+              </span>
             </div>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-3" role="list">
             {employers.length === 0 && (
               <p className="text-xs text-slate-500">
                 No employers awaiting review.
@@ -481,10 +721,12 @@ export function JobsPanel({ pendingJobs, pendingEmployers }: JobsPanelProps) {
             {employers.map((employer) => (
               <div
                 key={employer.id}
+                role="listitem"
                 className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200/70 bg-white px-3 py-2 text-sm shadow-sm"
               >
                 <div className="flex items-start gap-3">
                   <Checkbox
+                    aria-label={`Select ${employer.companyName}`}
                     checked={selectedEmployers.has(employer.id)}
                     onCheckedChange={(checked) =>
                       toggleEmployerSelection(employer.id, Boolean(checked))
@@ -516,7 +758,15 @@ export function JobsPanel({ pendingJobs, pendingEmployers }: JobsPanelProps) {
                     variant="outline"
                     size="sm"
                     disabled={employersBusy}
-                    onClick={() => runEmployerAction([employer.id], "verify")}
+                    onClick={() =>
+                      startConfirm(
+                        "employer",
+                        "verify",
+                        [employer.id],
+                        false,
+                        `Verify ${employer.companyName}?`,
+                      )
+                    }
                   >
                     {employersBusy ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -529,7 +779,15 @@ export function JobsPanel({ pendingJobs, pendingEmployers }: JobsPanelProps) {
                     variant="destructive"
                     size="sm"
                     disabled={employersBusy}
-                    onClick={() => runEmployerAction([employer.id], "suspend")}
+                    onClick={() =>
+                      startConfirm(
+                        "employer",
+                        "suspend",
+                        [employer.id],
+                        true,
+                        `Suspend ${employer.companyName}?`,
+                      )
+                    }
                   >
                     {employersBusy ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -545,7 +803,12 @@ export function JobsPanel({ pendingJobs, pendingEmployers }: JobsPanelProps) {
           {renderPagination(employerPage, employerPages, setEmployerPage)}
         </section>
 
-        <section className="space-y-3">
+        <section
+          className="space-y-3"
+          role="region"
+          aria-label="Job review panel"
+          aria-busy={jobsLoading}
+        >
           <div className="flex flex-wrap items-center justify-between gap-2 text-sm font-semibold text-slate-700">
             <div className="flex items-center gap-2">
               <Factory className="h-4 w-4 text-emerald-500" />
@@ -559,7 +822,15 @@ export function JobsPanel({ pendingJobs, pendingEmployers }: JobsPanelProps) {
                 variant="outline"
                 size="sm"
                 disabled={jobsBusy || selectedJobs.size === 0}
-                onClick={() => runJobAction(Array.from(selectedJobs), "approve")}
+                onClick={() =>
+                  startConfirm(
+                    "job",
+                    "approve",
+                    Array.from(selectedJobs),
+                    false,
+                    `Approve ${selectedJobsCount} job(s)?`,
+                  )
+                }
               >
                 <CheckCircle className="mr-1 h-3.5 w-3.5" />
                 Approve selected
@@ -568,54 +839,102 @@ export function JobsPanel({ pendingJobs, pendingEmployers }: JobsPanelProps) {
                 variant="destructive"
                 size="sm"
                 disabled={jobsBusy || selectedJobs.size === 0}
-                onClick={() => runJobAction(Array.from(selectedJobs), "reject")}
+                onClick={() =>
+                  startConfirm(
+                    "job",
+                    "reject",
+                    Array.from(selectedJobs),
+                    true,
+                    `Reject ${selectedJobsCount} job(s)?`,
+                  )
+                }
               >
                 <XCircle className="mr-1 h-3.5 w-3.5" />
                 Reject selected
               </Button>
             </div>
           </div>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <Input
-              placeholder="Search title, company, or location"
-              value={jobSearch}
-              onChange={(event) => {
-                setJobSearch(event.target.value);
-                setJobPage(1);
-              }}
-              className="w-full"
-            />
-            <Select
-              value={jobStatus}
-              onValueChange={(value) => {
-                setJobStatus(value as JobStatusFilter);
-                setJobPage(1);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="UNDER_REVIEW">Under review</SelectItem>
-                <SelectItem value="OPEN">Approved</SelectItem>
-                <SelectItem value="PAUSED">Rejected/Paused</SelectItem>
-                <SelectItem value="CLOSED">Closed</SelectItem>
-                <SelectItem value="all">All</SelectItem>
-              </SelectContent>
-            </Select>
-            <div className="flex items-center gap-2 text-xs text-slate-500">
-              <Checkbox
-                checked={jobs.length > 0 && selectedJobs.size === jobs.length}
-                onCheckedChange={(checked) =>
-                  setSelectedJobs(
-                    checked ? new Set(jobs.map((job) => job.id)) : new Set(),
-                  )
-                }
+          <div className="grid gap-3 sm:grid-cols-3" role="group" aria-label="Job filters">
+            <div className="space-y-1">
+              <Label htmlFor="job-search" className="text-xs text-slate-600">
+                Search jobs
+              </Label>
+              <Input
+                id="job-search"
+                placeholder="Search title, company, or location"
+                value={jobSearch}
+                onChange={(event) => {
+                  setJobSearch(event.target.value);
+                  setJobPage(1);
+                  setJobsSelectAllPages(false);
+                  setSelectedJobs(new Set());
+                }}
+                className="w-full"
               />
-              <span>Select all on page</span>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="job-status" className="text-xs text-slate-600">
+                Status
+              </Label>
+              <Select
+                value={jobStatus}
+                onValueChange={(value) => {
+                  setJobStatus(value as JobStatusFilter);
+                  setJobPage(1);
+                  setJobsSelectAllPages(false);
+                  setSelectedJobs(new Set());
+                }}
+              >
+                <SelectTrigger id="job-status" aria-label="Job status filter">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="UNDER_REVIEW">Under review</SelectItem>
+                  <SelectItem value="OPEN">Approved</SelectItem>
+                  <SelectItem value="PAUSED">Rejected/Paused</SelectItem>
+                  <SelectItem value="CLOSED">Closed</SelectItem>
+                  <SelectItem value="all">All</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-[0.7rem] text-slate-500">
+                {jobFiltersSummary}
+              </p>
+            </div>
+            <div className="flex flex-col justify-end gap-2 text-xs text-slate-500">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  aria-label="Select all jobs on this page"
+                  checked={
+                    jobs.length > 0 &&
+                    selectedJobs.size === jobs.length &&
+                    !jobsSelectAllPages
+                  }
+                  onCheckedChange={(checked) => {
+                    setJobsSelectAllPages(false);
+                    setSelectedJobs(
+                      checked ? new Set(jobs.map((job) => job.id)) : new Set(),
+                    );
+                  }}
+                />
+                <span>Select page ({jobs.length})</span>
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={selectingAllJobs || jobTotal === 0}
+                onClick={selectAllJobsAcrossPages}
+              >
+                {selectingAllJobs ? (
+                  <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                ) : null}
+                Select all results ({jobTotal})
+              </Button>
+              <span className="text-[0.7rem] text-slate-500">
+                Selected {selectedJobsCount} of {jobTotal}
+              </span>
             </div>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-3" role="list">
             {jobs.length === 0 && (
               <p className="text-xs text-slate-500">
                 No jobs are waiting for review.
@@ -624,11 +943,13 @@ export function JobsPanel({ pendingJobs, pendingEmployers }: JobsPanelProps) {
             {jobs.map((job) => (
               <div
                 key={job.id}
+                role="listitem"
                 className="rounded-lg border border-slate-200/70 bg-white p-4 shadow-sm"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-start gap-3">
                     <Checkbox
+                      aria-label={`Select ${job.title}`}
                       checked={selectedJobs.has(job.id)}
                       onCheckedChange={(checked) =>
                         toggleJobSelection(job.id, Boolean(checked))
@@ -675,30 +996,46 @@ export function JobsPanel({ pendingJobs, pendingEmployers }: JobsPanelProps) {
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={jobsBusy}
-                      onClick={() => runJobAction([job.id], "approve")}
-                      className="h-8"
-                    >
-                      {jobsBusy ? (
-                        <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
-                      ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={jobsBusy}
+                    onClick={() =>
+                      startConfirm(
+                        "job",
+                        "approve",
+                        [job.id],
+                        false,
+                        `Approve ${job.title}?`,
+                      )
+                    }
+                    className="h-8"
+                  >
+                    {jobsBusy ? (
+                      <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                    ) : (
                         <CheckCircle className="mr-1 h-3.5 w-3.5" />
                       )}
                       Approve
                     </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      disabled={jobsBusy}
-                      onClick={() => runJobAction([job.id], "reject")}
-                      className="h-8"
-                    >
-                      {jobsBusy ? (
-                        <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
-                      ) : (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    disabled={jobsBusy}
+                    onClick={() =>
+                      startConfirm(
+                        "job",
+                        "reject",
+                        [job.id],
+                        true,
+                        `Reject ${job.title}?`,
+                      )
+                    }
+                    className="h-8"
+                  >
+                    {jobsBusy ? (
+                      <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                    ) : (
                         <XCircle className="mr-1 h-3.5 w-3.5" />
                       )}
                       Reject
@@ -707,14 +1044,14 @@ export function JobsPanel({ pendingJobs, pendingEmployers }: JobsPanelProps) {
                       variant={job.isFeatured ? "secondary" : "outline"}
                       size="sm"
                       disabled={jobsBusy}
-                      onClick={() =>
-                        runJobAction(
-                          [job.id],
-                          job.isFeatured ? "unfeature" : "feature",
-                        )
-                      }
-                      className="h-8"
-                    >
+                    onClick={() =>
+                      runJobAction(
+                        [job.id],
+                        job.isFeatured ? "unfeature" : "feature",
+                      )
+                    }
+                    className="h-8"
+                  >
                       {jobsBusy ? (
                         <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
                       ) : job.isFeatured ? (
@@ -737,6 +1074,53 @@ export function JobsPanel({ pendingJobs, pendingEmployers }: JobsPanelProps) {
           {renderPagination(jobPage, jobPages, setJobPage)}
         </section>
       </CardContent>
+
+      <AlertDialog
+        open={confirmOpen}
+        onOpenChange={(open) => {
+          setConfirmOpen(open);
+          if (!open) {
+            setConfirmReason("");
+            setPendingConfirm(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pendingConfirm?.label ?? "Confirm action"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingConfirm?.type === "job"
+                ? "This will update the selected job listings and log the action."
+                : "This will update employer verification status."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {pendingConfirm?.requireReason ? (
+            <div className="space-y-2">
+              <Label htmlFor="reason" className="text-xs text-slate-700">
+                Reason (required)
+              </Label>
+              <Textarea
+                id="reason"
+                aria-label="Reason"
+                placeholder="Add a short note for audit logs and notifications"
+                value={confirmReason}
+                onChange={(event) => setConfirmReason(event.target.value)}
+                rows={3}
+              />
+            </div>
+          ) : null}
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => void performConfirmedAction()}
+            >
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }

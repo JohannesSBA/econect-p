@@ -2,6 +2,8 @@
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
 
+import { isAdminRole, isEmployerRole, isJobSeekerRole, roleFromToken } from "@/lib/authz";
+
 const secret = process.env.NEXTAUTH_SECRET;
 
 export async function middleware(req: NextRequest) {
@@ -55,12 +57,8 @@ export async function middleware(req: NextRequest) {
     if (!token) {
       return NextResponse.redirect(new URL(`/${lang}/auth/login`, req.url));
     }
-    const role = (token as unknown as { role: string })?.role as
-      | string
-      | undefined;
-    const allowed =
-      role === "EMPLOYER" || role === "ADMIN" || role === "RECRUITER";
-    if (!allowed) {
+    const role = roleFromToken(token);
+    if (!isEmployerRole(role)) {
       // Redirect to dashboard if logged-in but not allowed
       return NextResponse.redirect(new URL(`/${lang}/dashboard`, req.url));
     }
@@ -78,25 +76,20 @@ export async function middleware(req: NextRequest) {
 
     // Get token once for API checks
     const apiToken = token || (await getToken({ req, secret }));
-    const apiRole = (apiToken as unknown as { role: string })?.role as
-      | string
-      | undefined;
+    const apiRole = roleFromToken(apiToken);
 
     // Employer-only APIs
     if (pathname.startsWith("/api/employer/")) {
       if (!apiToken) return new NextResponse("Unauthorized", { status: 401 });
-      const allowed =
-        apiRole === "EMPLOYER" ||
-        apiRole === "ADMIN" ||
-        apiRole === "RECRUITER";
-      if (!allowed) return new NextResponse("Forbidden", { status: 403 });
+      if (!isEmployerRole(apiRole))
+        return new NextResponse("Forbidden", { status: 403 });
       return NextResponse.next();
     }
 
     // Admin-only APIs
     if (pathname.startsWith("/api/admin/")) {
       if (!apiToken) return new NextResponse("Unauthorized", { status: 401 });
-      if (apiRole !== "ADMIN")
+      if (!isAdminRole(apiRole))
         return new NextResponse("Forbidden", { status: 403 });
       return NextResponse.next();
     }
@@ -108,7 +101,7 @@ export async function middleware(req: NextRequest) {
       pathname.startsWith("/api/jobs/bookmark");
     if (seekerOnly) {
       if (!apiToken) return new NextResponse("Unauthorized", { status: 401 });
-      if (apiRole !== "JOB_SEEKER")
+      if (!isJobSeekerRole(apiRole))
         return new NextResponse("Forbidden", { status: 403 });
       return NextResponse.next();
     }
