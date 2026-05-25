@@ -3,7 +3,7 @@ import { z } from "zod";
 export const createPostSchema = z.object({
   content: z.string().min(1).max(5000),
   title: z.string().max(200).optional().nullable(),
-  type: z.enum(["TEXT", "IMAGE", "VIDEO", "LINK", "ARTICLE"]).optional().default("TEXT"),
+  type: z.enum(["TEXT", "IMAGE", "LINK", "ARTICLE"]).optional().default("TEXT"),
   images: z.array(z.string().url()).max(3).optional().default([]),
   linkUrl: z.string().url().optional().nullable(),
 });

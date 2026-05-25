@@ -4,7 +4,7 @@ import { ZodError } from "zod";
 import { HttpError } from "@/lib/errors";
 
 // Next.js 15 route handler context — params are async
-type RouteContext = { params: Promise<Record<string, string>> };
+export type RouteContext = { params: Promise<Record<string, string>> };
 type Handler = (req: NextRequest, ctx?: RouteContext) => Promise<NextResponse>;
 
 export function withHandler(handler: Handler): Handler {

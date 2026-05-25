@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { withHandler } from "@/lib/api";
+import { withHandler, type RouteContext } from "@/lib/api";
 import { requireUser } from "@/lib/auth";
 import { HttpError } from "@/lib/errors";
 import prisma from "@/lib/prisma";
 import { rateLimit } from "@/lib/rateLimiter";
 import { createCommentSchema } from "@/lib/validation/posts";
 
-type Ctx = { params: Promise<{ id: string }> };
-
-export const POST = withHandler(async (req: NextRequest, ctx?: Ctx) => {
+export const POST = withHandler(async (req: NextRequest, ctx?: RouteContext) => {
   const rl = rateLimit(req, "posts:comment", 30, 60 * 1000);
   if (!rl.allowed) throw new HttpError(429, `Too many requests. Retry in ${rl.retryAfterSeconds}s.`);
 

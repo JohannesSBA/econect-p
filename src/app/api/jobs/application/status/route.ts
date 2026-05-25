@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { withHandler } from "@/lib/api";
 import { requireUser } from "@/lib/auth";
+import { ApplicationStatus } from "@/generated/prisma";
 import { updateApplicationStatus } from "@/services/applications";
 import { updateApplicationStatusSchema } from "@/lib/validation/applications";
 
@@ -12,7 +13,7 @@ export const POST = withHandler(async (req: NextRequest) => {
 
   const { application, job } = await updateApplicationStatus({
     applicationId: parsed.applicationId,
-    status: parsed.status,
+    status: parsed.status as ApplicationStatus,
     actorId: user.id,
     actorRole: user.role,
     notify: parsed.notify,

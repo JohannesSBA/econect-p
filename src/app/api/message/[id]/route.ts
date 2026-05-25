@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { withHandler } from "@/lib/api";
+import { withHandler, type RouteContext } from "@/lib/api";
 import { requireUser } from "@/lib/auth";
 import { HttpError } from "@/lib/errors";
 import prisma from "@/lib/prisma";
 import { editMessageSchema } from "@/lib/validation/posts";
 
-type Ctx = { params: Promise<{ id: string }> };
-
-export const PUT = withHandler(async (req: NextRequest, ctx?: Ctx) => {
+export const PUT = withHandler(async (req: NextRequest, ctx?: RouteContext) => {
   const user = await requireUser();
   const { id: messageId } = await ctx!.params;
   const { text } = editMessageSchema.parse(await req.json());
@@ -26,7 +24,7 @@ export const PUT = withHandler(async (req: NextRequest, ctx?: Ctx) => {
   return NextResponse.json(updated);
 });
 
-export const DELETE = withHandler(async (_req: NextRequest, ctx?: Ctx) => {
+export const DELETE = withHandler(async (_req: NextRequest, ctx?: RouteContext) => {
   const user = await requireUser();
   const { id: messageId } = await ctx!.params;
 

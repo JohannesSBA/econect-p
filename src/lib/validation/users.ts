@@ -13,13 +13,14 @@ export const updateAboutSchema = z.object({
 });
 
 export const experienceSchema = z.object({
-  title: z.string().min(1).max(120),
+  jobTitle: z.string().min(1).max(120),
   company: z.string().min(1).max(120),
   location: z.string().max(120).optional(),
-  startDate: z.string().min(1),
-  endDate: z.string().optional().nullable(),
+  startDate: z.coerce.date(),
+  endDate: z.coerce.date().optional().nullable(),
   current: z.boolean().optional().default(false),
   description: z.string().max(2000).optional().nullable(),
+  employmentType: z.string().max(60).optional().nullable(),
 });
 
 export const onlineStatusSchema = z.object({

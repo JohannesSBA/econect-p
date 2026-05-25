@@ -1,3 +1,4 @@
+import { ApplicationStatus } from "@/generated/prisma";
 import prisma from "@/lib/prisma";
 import { HttpError } from "@/lib/errors";
 import { publishedJobWhere } from "@/lib/jobFilters";
@@ -52,7 +53,7 @@ export async function applyToJob(params: {
 
 export async function updateApplicationStatus(params: {
   applicationId: string;
-  status: string;
+  status: ApplicationStatus;
   actorId: string;
   actorRole: string;
   notify?: boolean;

@@ -20,9 +20,10 @@ export const POST = withHandler(async (req: NextRequest) => {
 
   const experience = await prisma.experience.create({
     data: {
-      title: parsed.title,
+      jobTitle: parsed.jobTitle,
       company: parsed.company,
       location: parsed.location ?? null,
+      employmentType: parsed.employmentType ?? null,
       startDate: parsed.startDate,
       endDate: parsed.endDate ?? null,
       current: parsed.current ?? false,

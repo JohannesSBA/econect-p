@@ -13,11 +13,11 @@ export const DELETE = withHandler(async (req: NextRequest) => {
 
   const education = await prisma.education.findUnique({
     where: { id },
-    include: { jobSeekerProfile: { select: { userId: true } } },
+    include: { jobSeekerProfile: { select: { jobSeekerId: true } } },
   });
 
   if (!education) throw new HttpError(404, "Education not found");
-  if (education.jobSeekerProfile?.userId !== user.id) throw new HttpError(403, "Forbidden");
+  if (education.jobSeekerProfile?.jobSeekerId !== user.id) throw new HttpError(403, "Forbidden");
 
   await prisma.education.delete({ where: { id } });
 

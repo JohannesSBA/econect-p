@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { withHandler } from "@/lib/api";
 import { requireUser } from "@/lib/auth";
+import { PostType } from "@/generated/prisma";
 import { HttpError } from "@/lib/errors";
 import prisma from "@/lib/prisma";
 import { rateLimit } from "@/lib/rateLimiter";
@@ -128,7 +129,7 @@ export const POST = withHandler(async (req: NextRequest) => {
     data: {
       title: parsed.title?.trim() || null,
       content: parsed.content.trim(),
-      type: parsed.type ?? "TEXT",
+      type: (parsed.type ?? "TEXT") as PostType,
       imageUrl: sanitizedImages[0] || null,
       linkUrl: parsed.linkUrl ?? null,
       images: sanitizedImages,

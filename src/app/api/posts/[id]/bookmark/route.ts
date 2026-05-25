@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { withHandler } from "@/lib/api";
+import { withHandler, type RouteContext } from "@/lib/api";
 import { requireUser } from "@/lib/auth";
 import { HttpError } from "@/lib/errors";
 import prisma from "@/lib/prisma";
 
-type Ctx = { params: Promise<{ id: string }> };
-
-export const POST = withHandler(async (_req: NextRequest, ctx?: Ctx) => {
+export const POST = withHandler(async (_req: NextRequest, ctx?: RouteContext) => {
   const user = await requireUser();
   const { id: postId } = await ctx!.params;
 
@@ -25,7 +23,7 @@ export const POST = withHandler(async (_req: NextRequest, ctx?: Ctx) => {
   return NextResponse.json({ saved: true });
 });
 
-export const DELETE = withHandler(async (_req: NextRequest, ctx?: Ctx) => {
+export const DELETE = withHandler(async (_req: NextRequest, ctx?: RouteContext) => {
   const user = await requireUser();
   const { id: postId } = await ctx!.params;
 

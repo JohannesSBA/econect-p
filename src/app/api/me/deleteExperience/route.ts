@@ -13,11 +13,11 @@ export const DELETE = withHandler(async (req: NextRequest) => {
 
   const experience = await prisma.experience.findUnique({
     where: { id },
-    include: { jobSeekerProfile: { select: { userId: true } } },
+    include: { jobSeekerProfile: { select: { jobSeekerId: true } } },
   });
 
   if (!experience) throw new HttpError(404, "Experience not found");
-  if (experience.jobSeekerProfile?.userId !== user.id) throw new HttpError(403, "Forbidden");
+  if (experience.jobSeekerProfile?.jobSeekerId !== user.id) throw new HttpError(403, "Forbidden");
 
   await prisma.experience.delete({ where: { id } });
 
