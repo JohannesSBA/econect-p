@@ -33,6 +33,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Prisma client must exist before tsc can resolve @/generated/prisma types
+      - name: Generate Prisma client
+        run: npx prisma generate
+
       - name: Run ESLint
         run: npm run lint -- --max-warnings=0
 
@@ -78,50 +82,9 @@ jobs:
       - name: Run unit tests
         run: npm run test
 
-  build:
-    name: Build
-    needs: lint-and-typecheck
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: econnect
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Generate Prisma client
-        run: npx prisma generate
-
-      - name: Apply migrations
-        run: npx prisma migrate deploy --skip-generate
-
-      - name: Build Next.js app
-        run: npm run build
-
   e2e:
     name: Playwright
-    needs:
-      - build
-      - unit-tests
+    needs: unit-tests
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -149,16 +112,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps
-
       - name: Generate Prisma client
         run: npx prisma generate
 
       - name: Apply migrations
         run: npx prisma migrate deploy --skip-generate
 
-      - name: Run Playwright tests
+      - name: Build production app
+        run: npm run build
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright tests against production build
         run: npm run test:e2e
 
       - name: Upload Playwright report
