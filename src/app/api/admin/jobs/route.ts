@@ -3,14 +3,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { JobStatus } from "@/generated/prisma";
 import { withHandler } from "@/lib/api";
 import { requireAdmin } from "@/lib/auth";
-import { getRequestLogger } from "@/lib/logger";
 import { listJobs, updateJobs } from "@/services/adminJobs";
 import { HttpError } from "@/lib/errors";
 
 const DEFAULT_PAGE_SIZE = 10;
 
 export const GET = withHandler(async (req: NextRequest) => {
-  const logger = getRequestLogger(req, { route: "api:admin:jobs" });
   await requireAdmin();
 
   const { searchParams } = new URL(req.url);
@@ -30,7 +28,6 @@ export const GET = withHandler(async (req: NextRequest) => {
 });
 
 export const PATCH = withHandler(async (req: NextRequest) => {
-  const logger = getRequestLogger(req, { route: "api:admin:jobs" });
   const admin = await requireAdmin();
 
   const body = await req.json();

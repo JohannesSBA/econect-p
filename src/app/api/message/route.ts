@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid message payload" }, { status: 400 });
   }
-  const { text, chatId, chatPartner, attachments, replyTo } = parsed.data;
+  const { text, chatPartner, attachments, replyTo } = parsed.data;
 
   if ((!text || !text.trim()) && (!attachments || attachments.length === 0)) {
     return NextResponse.json({ error: "Message text or attachments are required" }, { status: 400 });

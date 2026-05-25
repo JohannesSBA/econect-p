@@ -3,13 +3,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { withHandler } from "@/lib/api";
 import { requireAdmin } from "@/lib/auth";
 import { HttpError } from "@/lib/errors";
-import { getRequestLogger } from "@/lib/logger";
 import { listEmployers, updateEmployers } from "@/services/adminEmployers";
 
 const DEFAULT_PAGE_SIZE = 10;
 
 export const GET = withHandler(async (req: NextRequest) => {
-  const logger = getRequestLogger(req, { route: "api:admin:employers" });
   await requireAdmin();
 
   const { searchParams } = new URL(req.url);
@@ -32,7 +30,6 @@ export const GET = withHandler(async (req: NextRequest) => {
 });
 
 export const PATCH = withHandler(async (req: NextRequest) => {
-  const logger = getRequestLogger(req, { route: "api:admin:employers" });
   const admin = await requireAdmin();
 
   const body = await req.json();

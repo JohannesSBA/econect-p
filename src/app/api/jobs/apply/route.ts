@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { withHandler } from "@/lib/api";
 import { requireUser, requireRole } from "@/lib/auth";
-import { HttpError } from "@/lib/errors";
 import { applyToJob } from "@/services/applications";
 import { applyJobSchema } from "@/lib/validation/applications";
 
