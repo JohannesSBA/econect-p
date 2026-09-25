@@ -1,17 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/options";
-import prisma from "@/lib/prisma";
 
-// POST /api/connection/request
-export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const { userId } = await req.json();
-  const user = await prisma.user.findUnique({ where: { email: session.user.email } });
-  if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
-  if (user.id === userId) return NextResponse.json({ error: "Cannot connect to self" }, { status: 400 });
-  // Check if already exists
+import { withHandler } from "@/lib/api";
+import { requireUser } from "@/lib/auth";
+import { HttpError } from "@/lib/errors";
+import prisma from "@/lib/prisma";
+import { rateLimit } from "@/lib/rateLimiter";
+import { connectionUserSchema } from "@/lib/validation/connections";
+
+export const POST = withHandler(async (req: NextRequest) => {
+  const rl = rateLimit(req, "connection:request", 20, 60 * 60 * 1000);
+  if (!rl.allowed) throw new HttpError(429, `Too many requests. Retry in ${rl.retryAfterSeconds}s.`);
+
+  const user = await requireUser();
+  const { userId } = connectionUserSchema.parse(await req.json());
+
+  if (user.id === userId) throw new HttpError(400, "Cannot connect to yourself");
+
   const existing = await prisma.connection.findFirst({
     where: {
       OR: [
@@ -20,19 +24,21 @@ export async function POST(req: NextRequest) {
       ],
     },
   });
-  if (existing) return NextResponse.json({ error: "Already requested or connected" }, { status: 400 });
+  if (existing) throw new HttpError(400, "Already requested or connected");
+
   const conn = await prisma.connection.create({
     data: { senderId: user.id, receiverId: userId, status: "PENDING" },
   });
-  // Notify receiver
+
   await prisma.notification.create({
     data: {
-      userId: userId,
-      type: 'CONNECTION_REQUEST',
-      title: 'New connection request',
+      userId,
+      type: "CONNECTION_REQUEST",
+      title: "New connection request",
       message: `${user.name} sent you a connection request`,
       data: { senderId: user.id },
     },
   });
-  return NextResponse.json(conn);
-}
+
+  return NextResponse.json(conn, { status: 201 });
+});

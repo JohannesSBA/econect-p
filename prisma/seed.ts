@@ -1,5 +1,19 @@
+/**
+ * Development seed data:
+ * - Admins + verified/unverified employers (with audit logs for verification)
+ * - Mixed job states (approved/published, under-review, rejected)
+ * - Job seekers with profiles, posts, connections, applications against OPEN jobs
+ */
 import { PrismaClient } from '../src/generated/prisma'
-const prisma = new PrismaClient()
+import { PrismaPg } from '@prisma/adapter-pg'
+
+const datasourceUrl = process.env.DATABASE_URL
+if (!datasourceUrl) {
+  throw new Error('DATABASE_URL is not set')
+}
+
+const adapter = new PrismaPg(datasourceUrl)
+const prisma = new PrismaClient({ adapter })
 
 const SKILL_NAMES = [
   'React', 'Node.js', 'TypeScript', 'Python', 'Docker', 'AWS', 'MongoDB', 'PostgreSQL',
@@ -33,13 +47,16 @@ const JOB_TITLES = [
 
 async function main() {
   console.log('🧹 Cleaning up database...')
+  await prisma.adminAuditLog.deleteMany({})
   await prisma.message.deleteMany({})
+  await prisma.messageRequest.deleteMany({})
   await prisma.jobApplication.deleteMany({})
   await prisma.skillOnProfile.deleteMany({})
   await prisma.education.deleteMany({})
   await prisma.experience.deleteMany({})
   await prisma.jobSeekerProfile.deleteMany({})
   await prisma.jobBookmark.deleteMany({})
+  await prisma.payment.deleteMany({})
   await prisma.jobListing.deleteMany({})
   await prisma.connection.deleteMany({})
   await prisma.skill.deleteMany({})
@@ -47,6 +64,11 @@ async function main() {
   await prisma.like.deleteMany({})
   await prisma.comment.deleteMany({})
   await prisma.post.deleteMany({})
+  await prisma.postReport.deleteMany({})
+  await prisma.postBookmark.deleteMany({})
+  await prisma.companyFollow.deleteMany({})
+  await prisma.userBlock.deleteMany({})
+  await prisma.employerProfile.deleteMany({})
   await prisma.user.deleteMany({})
   await prisma.pendingUser.deleteMany({})
 
@@ -80,8 +102,9 @@ async function main() {
 
   // Create employer users
   const employers = await Promise.all(
-    COMPANIES.slice(0, 8).map((company, i) =>
-      prisma.user.create({
+    COMPANIES.slice(0, 8).map((company, i) => {
+      const isVerified = i % 2 === 0;
+      return prisma.user.create({
         data: {
           name: company,
           phone: `9110000${i}`,
@@ -91,12 +114,19 @@ async function main() {
           employerProfile: {
             create: {
               companyName: company,
-              website: `https://${company.toLowerCase().replace(' ', '')}.et`
+              website: `https://${company.toLowerCase().replace(' ', '')}.et`,
+              isVerified,
+              verifiedAt: isVerified ? new Date(Date.now() - 1000 * 60 * 60 * 24 * (i + 1)) : null,
+              verifiedById: isVerified ? admins[0].id : null,
+              verificationNote: isVerified ? 'Seeded verification' : 'Waiting on documents',
             }
-          }
+          },
+        },
+        include: {
+          employerProfile: true,
         },
       })
-    )
+    })
   )
 
   // Create job seeker users with comprehensive profiles
@@ -172,47 +202,139 @@ async function main() {
     })
   )
 
-  // Create job listings
+  // Create job listings with mixed review states and audit logs
   const jobListings = []
-  for (const employer of employers) {
-    for (let j = 0; j < 4; j++) {
-      const job = await prisma.jobListing.create({
+  const auditLogs: {
+    actorId: string
+    action: string
+    targetType: string
+    targetId: string
+    details?: Record<string, unknown> | null
+  }[] = []
+  const reviewerId = admins[0]?.id
+
+  for (const [i, employer] of employers.entries()) {
+    const employerVerified = employer.employerProfile?.isVerified ?? false
+
+    if (employerVerified && employer.employerProfile && reviewerId) {
+      auditLogs.push({
+        actorId: reviewerId,
+        action: 'EMPLOYER_VERIFY',
+        targetType: 'employerProfile',
+        targetId: employer.employerProfile.id,
+        details: { seeded: true },
+      })
+    }
+
+    // Approved & published job for verified employers
+    if (employerVerified) {
+      const approvedJob = await prisma.jobListing.create({
         data: {
-          title: JOB_TITLES[j % JOB_TITLES.length],
-          description: `We are looking for a talented ${JOB_TITLES[j % JOB_TITLES.length]} to join our growing team at ${employer.name}.`,
+          title: `${JOB_TITLES[i % JOB_TITLES.length]} (Approved)`,
+          description: `Approved posting for ${employer.name}.`,
           company: employer.name,
-          location: LOCATIONS[j % LOCATIONS.length],
+          location: LOCATIONS[i % LOCATIONS.length],
           tags: ['Tech', 'Engineering', 'Innovation'],
-          salary: `${5000 + j * 1000}`,
-          jobType: JOB_TYPES[j % JOB_TYPES.length] as any,
+          salary: `${6000 + i * 500}`,
+          jobType: JOB_TYPES[i % JOB_TYPES.length] as any,
           employerId: employer.id,
+          status: 'OPEN',
           isPublished: true,
+          isFeatured: i % 2 === 0,
+          publishedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * (i + 1)),
+          reviewedAt: new Date(),
+          reviewedById: reviewerId ?? undefined,
+          reviewNote: 'Approved during seed',
         },
       })
-      jobListings.push(job)
+      jobListings.push(approvedJob)
+      await prisma.payment.create({
+        data: {
+          employerId: employer.id,
+          jobId: approvedJob.id,
+          amount: 50000,
+          currency: 'ETB',
+          reference: `seed_${approvedJob.id}`,
+          status: 'PAID',
+          provider: 'chapa',
+          metadata: { seeded: true },
+        }
+      })
+      if (reviewerId) {
+        auditLogs.push({
+          actorId: reviewerId,
+          action: 'JOB_APPROVE',
+          targetType: 'job',
+          targetId: approvedJob.id,
+          details: { note: 'Seed approval' },
+        })
+      }
+    }
+
+    // Under review job (unpublished)
+    const underReviewJob = await prisma.jobListing.create({
+      data: {
+        title: `${JOB_TITLES[(i + 1) % JOB_TITLES.length]} (Under review)`,
+        description: `Awaiting admin approval for ${employer.name}.`,
+        company: employer.name,
+        location: LOCATIONS[(i + 1) % LOCATIONS.length],
+        tags: ['Pending', 'Review'],
+        salary: `${5500 + i * 500}`,
+        jobType: JOB_TYPES[(i + 1) % JOB_TYPES.length] as any,
+        employerId: employer.id,
+        status: 'UNDER_REVIEW',
+        isPublished: false,
+        reviewNote: 'Waiting on verification',
+      },
+    })
+    jobListings.push(underReviewJob)
+
+    // Rejected job example (only for first employer)
+    if (i === 0) {
+      const rejectedJob = await prisma.jobListing.create({
+        data: {
+          title: `${JOB_TITLES[(i + 2) % JOB_TITLES.length]} (Rejected)`,
+          description: `Rejected sample posting for ${employer.name}.`,
+          company: employer.name,
+          location: LOCATIONS[(i + 2) % LOCATIONS.length],
+          tags: ['Draft'],
+          salary: `${5200 + i * 500}`,
+          jobType: JOB_TYPES[(i + 2) % JOB_TYPES.length] as any,
+          employerId: employer.id,
+          status: 'PAUSED',
+          isPublished: false,
+          reviewedAt: new Date(),
+          reviewedById: reviewerId ?? undefined,
+          reviewNote: 'Insufficient role details',
+        },
+      })
+      jobListings.push(rejectedJob)
+      if (reviewerId) {
+        auditLogs.push({
+          actorId: reviewerId,
+          action: 'JOB_REJECT',
+          targetType: 'job',
+          targetId: rejectedJob.id,
+          details: { reason: 'Insufficient role details' },
+        })
+      }
     }
   }
 
-  // Create a paid payment and mark a job published for demo
-  if (employers.length > 0 && jobListings.length > 0) {
-    await prisma.payment.create({
-      data: {
-        employerId: employers[0].id,
-        jobId: jobListings[0].id,
-        amount: 50000,
-        currency: 'ETB',
-        reference: `seed_${jobListings[0].id}`,
-        status: 'PAID',
-        provider: 'chapa',
-        metadata: { seeded: true },
-      }
+  if (auditLogs.length > 0) {
+    await prisma.adminAuditLog.createMany({
+      data: auditLogs.map((log) => ({
+        ...log,
+        details: log.details ? JSON.stringify(log.details) : undefined,
+      })),
     })
-    await prisma.jobListing.update({ where: { id: jobListings[0].id }, data: { isPublished: true, status: 'OPEN', publishedAt: new Date() } })
   }
 
-  // Create job applications
+  // Create job applications against published jobs when available
+  const openJobs = jobListings.filter(job => job.status === 'OPEN' && job.isPublished)
   for (const seeker of jobSeekers) {
-    const jobsToApply = jobListings.sort(() => 0.5 - Math.random()).slice(0, 3)
+    const jobsPool = openJobs.length > 0 ? openJobs : jobListings
+    const jobsToApply = jobsPool.sort(() => 0.5 - Math.random()).slice(0, 3)
     for (const job of jobsToApply) {
       await prisma.jobApplication.create({
         data: {

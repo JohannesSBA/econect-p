@@ -64,9 +64,9 @@ export default function ChapaReturnPage() {
       if (!res.ok) throw new Error('Failed to confirm payment')
       const data = await res.json()
       setStatus('success')
-      setMessage('Payment confirmed. Your job is now published.')
+      setMessage('Payment confirmed. Your job will be published after admin review.')
       if (data?.jobId) await loadJob(data.jobId)
-      setTimeout(() => router.push('/employer/jobs/active'), 1500)
+      setTimeout(() => router.push('/employer/jobs'), 1500)
     } catch (error: unknown) {
       const fallbackMessage = error instanceof Error ? error.message : null
       setMessage(fallbackMessage || "Confirmation failed.")
@@ -85,9 +85,9 @@ export default function ChapaReturnPage() {
         const data = await res.json()
         if (String(data.status).toUpperCase() === 'PAID') {
           setStatus('success')
-          setMessage('Payment verified. Your job is now published.')
+          setMessage('Payment verified. Your job will publish after admin approval.')
           if (data?.jobId) await loadJob(data.jobId)
-          setTimeout(() => router.push('/employer/jobs/active'), 1500)
+          setTimeout(() => router.push('/employer/jobs'), 1500)
           return
         }
       }
@@ -139,9 +139,9 @@ export default function ChapaReturnPage() {
       {/* Success summary */}
       {status === 'success' && job && (
         <div className="mt-8 bg-green-50 border border-green-200 rounded-lg p-4 text-left max-w-xl mx-auto">
-          <h2 className="font-semibold text-green-800">Job published</h2>
+          <h2 className="font-semibold text-green-800">Payment recorded</h2>
           <p className="text-sm text-green-700 mt-1">{job?.title} — {job?.company} • {job?.location}</p>
-          <p className="text-xs text-green-700 mt-1">You’ll be redirected to your active listings shortly.</p>
+          <p className="text-xs text-green-700 mt-1">We will publish this job after an admin review.</p>
         </div>
       )}
     </div>

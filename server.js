@@ -6,6 +6,16 @@ const server = createServer();
 const wss = new WebSocketServer({ server });
 
 const connectedUsers = new Map();
+let totalMessagesBroadcast = 0;
+let intervalMessagesBroadcast = 0;
+const metricsIntervalMs = Number(process.env.WS_METRICS_INTERVAL_MS || 60000);
+
+setInterval(() => {
+  console.log(
+    `[WS metrics] connections=${connectedUsers.size} msgs_per_interval=${intervalMessagesBroadcast} total_msgs=${totalMessagesBroadcast}`,
+  );
+  intervalMessagesBroadcast = 0;
+}, metricsIntervalMs);
 
 wss.on('connection', (ws, request) => {
   const { query } = parse(request.url, true);
@@ -24,6 +34,7 @@ wss.on('connection', (ws, request) => {
   });
 
   console.log(`User ${userId} connected`);
+  console.log(`[WS] active connections: ${connectedUsers.size}`);
 
   // Send online status to other users
   broadcastToOthers(userId, {
@@ -55,6 +66,11 @@ wss.on('connection', (ws, request) => {
 });
 
 function handleMessage(senderId, message) {
+  if (message.type === 'new_message') {
+    totalMessagesBroadcast += 1;
+    intervalMessagesBroadcast += 1;
+  }
+
   switch (message.type) {
     case 'ping':
       // respond only to sender with pong + ts
@@ -149,6 +165,7 @@ function handleUserDisconnect(userId) {
     connectedUsers.delete(userId);
     
     console.log(`User ${userId} disconnected`);
+    console.log(`[WS] active connections: ${connectedUsers.size}`);
 
     // Notify other users
     broadcastToOthers(userId, {

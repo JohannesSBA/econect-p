@@ -287,6 +287,16 @@ export default function Header({ user }: HeaderProps) {
               className="hidden flex-wrap items-center gap-2 md:flex"
               aria-label="Primary navigation"
             >
+              {user?.role === "ADMIN" && (
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="sm"
+                  className="rounded-full px-4 font-medium transition-all whitespace-nowrap"
+                >
+                  <Link href="/admin">Admin</Link>
+                </Button>
+              )}
               {navLinks.map((item) => {
                 const active = isActive(item.href);
                 return (
@@ -317,7 +327,7 @@ export default function Header({ user }: HeaderProps) {
           </div>
           <div className="flex items-center gap-2">
             <div className="hidden min-w-[14rem] max-w-full flex-1 lg:block">
-               <SearchComponent />
+              <SearchComponent />
             </div>
             <ProfileButton className="hidden shrink-0 md:inline-flex" />
             <NotificationButton className="hidden shrink-0 md:inline-flex" />

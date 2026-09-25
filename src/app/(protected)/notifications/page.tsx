@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Bell, Eye, MessageSquare, Users } from "lucide-react";
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "@/generated/prisma";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

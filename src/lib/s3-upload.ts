@@ -70,6 +70,17 @@ export async function uploadCoverLetter(
   return uploadToS3(file, key, file.type);
 }
 
+export async function uploadChatAttachment(
+  file: File,
+  userId: string,
+  chatId: string,
+): Promise<string> {
+  const timestamp = Date.now();
+  const sanitizedName = file.name.replace(/\s+/g, "-");
+  const key = `chat-attachments/${chatId}/${userId}/${timestamp}-${sanitizedName}`;
+  return uploadToS3(file, key, file.type || "application/octet-stream");
+}
+
 export function getS3Url(key: string): string {
   return `https://${BUCKET}.s3.${AWS_REGION}.amazonaws.com/${key}`;
-} 
+}

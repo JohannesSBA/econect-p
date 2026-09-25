@@ -19,12 +19,6 @@ export async function POST(req: NextRequest) {
 
     if (status === 'success' || status === 'paid') {
       await prisma.payment.update({ where: { id: payment.id }, data: { status: 'PAID' } });
-      if (payment.jobId) {
-        await prisma.jobListing.update({
-          where: { id: payment.jobId },
-          data: { isPublished: true, status: 'OPEN', publishedAt: new Date() }
-        });
-      }
     } else if (status === 'failed' || status === 'canceled') {
       await prisma.payment.update({ where: { id: payment.id }, data: { status: 'FAILED' } });
     }
@@ -35,4 +29,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'server error' }, { status: 500 });
   }
 }
-

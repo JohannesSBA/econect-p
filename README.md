@@ -1,222 +1,65 @@
-# Econnect – Ethiopia's LinkedIn (Deployment-Ready Starter)
+# Econnect
 
-A full-stack professional networking platform tailored for Ethiopia. Econnect ships with a Next.js 14 App Router frontend, Prisma + PostgreSQL data layer, Socket.IO real-time messaging, AWS S3 uploads, Chapa-powered employer payments, and a polished English-language experience out of the box.
+**The career network built for Ethiopia.**
 
----
-
-## Tech Stack & Highlights
-- **Frontend**: Next.js App Router, TypeScript, Tailwind CSS, shadcn/ui components.
-- **Backend**: Next.js API routes with Zod validation, Prisma ORM, NextAuth (credentials + extensible for OAuth).
-- **Database**: PostgreSQL 16 (local Docker Compose or managed service in production).
-- **Real-time**: Dedicated Socket.IO server (`server.js`) consumed by the client SDK in `src/lib/socket.ts`.
-- **Storage**: Direct-to-S3 uploads with the AWS SDK; cover letters, resumes, and profile assets stored under user-specific prefixes.
-- **Payments**: Chapa integration for employer subscriptions/credits with initiation, verification, and webhook handling.
-- **Quality**: Vitest unit tests, Playwright e2e smoke tests, ESLint, Prettier, GitHub Actions CI, and rate limiting helpers.
+Econnect brings job seekers, employers, and professionals onto one trusted platform. It is a mobile-first place to show your work, find opportunities, and stay in touch—designed for Ethiopia’s job market, including people who are new to professional networking online.
 
 ---
 
-## Core Features
-- Real-time threaded messaging with reactions, typing indicators, push notifications, file attachments, and search.
-- LinkedIn-style feed with rich media posts, reactions, comments, bookmarking, and reporting.
-- Role-based access control (Admin, Employer, Job Seeker, Recruiter, Moderator) enforced in middleware and API routes.
-- Employer dashboard, job posting workflow, applications tracking, and Chapa paywall.
-- Resume/Cover letter management with S3 uploads and secure download URLs.
-- Profile editing (experience, education, skills, photo uploads) with a responsive UI.
-- Notifications center with multi-channel delivery (in-app + push).
+## What you can do
+
+### Find work
+Browse jobs across Ethiopia, filter what fits, and apply with a profile, resume, and cover letter. Track every application from pending through interview, offer, or hire.
+
+### Hire
+Create a company page, post openings, and review applicants in one dashboard. Publish featured listings when you are ready to reach more candidates.
+
+### Build a professional presence
+Set up a profile with your headline, photo, experience, education, and skills. Follow companies, bookmark jobs and posts, and keep your career story in one place.
+
+### Grow your network
+Connect with people you know, accept or decline requests, and message contacts in real time—including reactions, file sharing, and search across conversations.
+
+### Stay in the conversation
+Share updates on a public feed (text, images, links, and articles), comment and like posts, save what matters, and get notified when someone reaches out or your application moves forward.
 
 ---
 
-## Repository Layout
-```
-.
-├─ prisma/                  # Prisma schema, migrations, and seed script
-├─ public/                  # Static assets (logos, icons, etc.)
-├─ src/
-│  ├─ app/                  # Next.js App Router (routes, API handlers, layouts)
-│  ├─ components/           # Reusable UI components (shadcn/ui, feature modules)
-│  ├─ lib/                  # Socket helpers, S3 utilities, payments, auth
-│  ├─ types/                # Shared TypeScript types
-│  └─ utils/                # Utility helpers (formatters, validators)
-├─ tests/                   # Vitest suites
-├─ e2e/                     # Playwright specs
-├─ server.js                # Socket.IO server entrypoint
-├─ docker-compose.yml       # Local Postgres + pgAdmin setup
-├─ start-dev.sh             # Starts Socket.IO + Next.js together
-├─ QUICK_START.md           # Hands-on walkthrough for contributors
-└─ README.md
-```
+## Who it is for
+
+**Job seekers** who want a local, approachable way to be found and to apply.
+
+**Employers** who need a straightforward path from posting a role to talking with candidates.
+
+**Recruiters and professionals** who want to stay visible, follow companies, and keep conversations going.
+
+**Admins and reviewers** who keep the community safe—approving jobs, verifying employers, and handling reports.
 
 ---
 
-## Prerequisites
-- Node.js 20+
-- npm 10+
-- Docker Desktop (for local Postgres via `docker compose`)
-- OpenSSL (generate local secrets as needed)
+## Built around Ethiopia
+
+- Guided onboarding so professional networking feels familiar, not intimidating
+- English, Amharic, and Afaan Oromo
+- Payments for job posts and related products through Chapa
+- Mobile-first design for the way people actually get online
 
 ---
 
-## Quick Start
-1. **Install dependencies**
-   ```bash
-   npm install
-   ```
-2. **Copy environment template**
-   ```bash
-   cp .env.example .env
-   ```
-3. **Bring up Postgres locally**
-   ```bash
-   docker compose up -d
-   ```
-4. **Generate Prisma client + apply schema**
-   ```bash
-   npx prisma generate
-   npx prisma migrate dev --name init
-   ```
-5. **Seed baseline data (admin, demo users, sample jobs)**
-   ```bash
-   npm run seed
-   ```
-6. **Start the full development stack**
-   ```bash
-   npm run dev       # runs start-dev.sh → Socket.IO + Next.js
-   ```
-   The app becomes available at [http://localhost:3000](http://localhost:3000).
+## Get started
 
-**Split servers manually?**
-```bash
-npm run ws        # WebSocket server on ws://localhost:3002
-npm run dev:next  # Next.js (Turbopack)
-```
+1. Create an account and choose how you use Econnect (job seeker, employer, or similar).
+2. Complete your profile or company page.
+3. Apply to jobs, post a role, or start connecting and messaging.
 
 ---
 
-## Environment Variables (`.env.example`)
-```ini
-# Database
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/econnect?schema=public
+## How it is built
 
-# NextAuth
-NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET=change_me
+Econnect is a TypeScript web app. The product UI and most APIs live in **Next.js** (App Router) with **React** and **Tailwind CSS**. Pages are grouped by audience: public auth, signed-in feed/jobs/chat/profile, employer dashboards, and admin tools. Shared UI sits in `src/components`; domain screens hang off `src/features`.
 
-# Seed admin credentials
-SEED_ADMIN_EMAIL=admin@econnect.et
-SEED_ADMIN_PASSWORD=ChangeMe123!
+Business rules stay in **services** (`src/services`), not in route handlers. API routes validate input with **Zod**, check roles through shared auth helpers, then call those services. **NextAuth** issues sessions; middleware and route guards keep job seekers, employers, and admins on the right surfaces.
 
-# AWS S3
-AWS_REGION=us-east-1
-AWS_S3_BUCKET=econnect-assets
-AWS_ACCESS_KEY_ID=YOUR_ACCESS_KEY
-AWS_SECRET_ACCESS_KEY=YOUR_SECRET
-S3_PUBLIC_URL=https://econnect-assets.s3.amazonaws.com
+Data lives in **PostgreSQL**, modeled and queried with **Prisma**. That covers users, profiles, jobs, applications, posts, connections, notifications, and payments. Uploads (resumes, photos, chat files) go to **Amazon S3**. Employer checkout uses **Chapa**. Live chat, presence, and typing run on a dedicated **Socket.IO** server beside the Next.js app. Email goes through **Resend**; copy is localized (English, Amharic, Afaan Oromo).
 
-# WebSocket server
-WS_PORT=3002
-NEXT_PUBLIC_SOCKET_URL=ws://localhost:3002
-
-# Chapa
-CHAPA_PUBLIC_KEY=CHAPUB_xxx
-CHAPA_SECRET_KEY=CHASEC_xxx
-CHAPA_BASE_URL=https://api.chapa.co/v1
-CHAPA_RETURN_URL=http://localhost:3000/employer/dashboard
-CHAPA_CALLBACK_URL=http://localhost:3000/api/webhooks/chapa
-WEBHOOK_SECRET=dev_webhook_secret
-
-# Email / Notifications
-RESEND_KEY=your_resend_api_key
-RESEND_FROM="Econnect <no-reply@econnect.et>"
-```
-
-The runtime automatically falls back to legacy env names (`S3ACCESS_KEY_ID`, `S3SECRET_ACCESS_KEY`, `BUCKET_NAME`) if present, so migration is smooth.
-
----
-
-## npm Scripts
-- `npm run dev` – Boot Socket.IO + Next.js together (uses `start-dev.sh`).
-- `npm run ws` – Socket.IO server only (`server.js`).
-- `npm run dev:next` – Next.js dev server with Turbopack.
-- `npm run build` / `npm run start` – Production build and serve.
-- `npm run lint` – ESLint with Next.js rules.
-- `npm test` / `npm run test:watch` – Vitest suites.
-- `npm run test:e2e` – Playwright tests (requires `npm run build && npm run start` in another terminal).
-- `npm run test:e2e:report` – View last Playwright report.
-
----
-
-## Real-Time Messaging
-- Socket.IO server: `server.js` (configurable via `WS_PORT`).
-- Client SDK: `src/lib/socket.ts` handles connecting with auth handshake, presence, typing indicators, and reactions events.
-- Messaging UI: `src/app/[lang]/(protected)/components/MessagingInterface.tsx` with threaded conversations, attachments, and push notifications wired through `src/lib/push-notifications.ts`.
-- WebSocket tests: `tests/websocket.client.test.ts` covers client/server handshake defaults.
-
-Run messaging end-to-end locally by starting the stack with `npm run dev`, then opening two browsers on `/chat`.
-
----
-
-## File & Media Uploads
-- Upload APIs live under `src/app/api/upload` and leverage `src/lib/s3-upload.ts`.
-- Resume/Profile helpers (`uploadResume`, `uploadImage`, etc.) unify S3 key generation.
-- Ensure `AWS_*` credentials or legacy `S3*` envs are set before uploading. The helper throws descriptive errors if credentials are missing.
-
----
-
-## Jobs, Applications & Payments
-- Prisma models: `prisma/schema.prisma` (JobListing, EmployerProfile, Payment, etc.).
-- Employer-only APIs guard creation flows (`src/app/api/employer/*`).
-- Chapa flows:
-  - `POST /api/payments/chapa/initiate` – create `Payment` + obtain Chapa checkout URL.
-  - `POST /api/payments/chapa/verify` – poll Chapa after redirect.
-  - `POST /api/webhooks/chapa` – webhook entry secured via `WEBHOOK_SECRET` header.
-- Successful payments unlock job publication for the employer dashboard (`src/app/[lang]/employer/dashboard/page.tsx`).
-
----
-
-## Localisation
-- Dictionaries located in `src/app/dictionaries/{en,am,om}.json`.
-
----
-
-## Testing & QA
-- **Unit tests**: `npm test` (Vitest) with coverage via `@vitest/coverage-v8`.
-- **End-to-end**: `npm run test:e2e` (Playwright). Configure base URL and auth fixtures in `playwright.config.ts`.
-- **CI**: `.github/workflows/ci.yml` installs deps (`npm ci`), runs Prisma generate, lints, runs tests, and builds.
-
-Before pushing, run:
-```bash
-npm run lint
-npm test
-npm run test:e2e
-```
-
----
-
-## Deployment (AWS-first reference)
-1. **Database**: Provision Amazon RDS PostgreSQL 16. Set `DATABASE_URL`, run `npx prisma migrate deploy` during build.
-2. **Storage**: Create S3 bucket (e.g., `econnect-assets`). Apply CORS for PUT/GET, enable CloudFront for CDN delivery.
-3. **Next.js App**: Deploy to AWS Amplify or ECS Fargate. Build command example:
-   ```bash
-   npm install
-   npx prisma generate
-   npm run build
-   ```
-   Set required env vars in the Amplify console (including `NEXT_PUBLIC_SOCKET_URL`).
-4. **Socket.IO**: Deploy `server.js` on an EC2 instance (Node 20 + PM2). Front with Nginx and TLS at `wss://realtime.econnect.et`.
-5. **Payments**: Configure Chapa dashboard return + callback URLs to your production domains.
-6. **Domains**: Point `app.econnect.et` → Amplify and `realtime.econnect.et` → EC2 load balancer/instance.
-
----
-
-## Roadmap / Next Steps
-1. Connection suggestions & graph-powered recommendations.
-2. Advanced search (Postgres full-text + pg_trgm) across users, jobs, and posts.
-3. Rich media workflows (image/video transcoding, thumbnails via Lambda@Edge).
-4. Admin moderation portal for reports, content review, and user suspensions.
-5. Analytics dashboard (privacy-preserving metrics for employers and admins).
-6. Optional SMS-based login/verification through Ethio-Telecom or Firebase.
-7. Resume parsing & job matching via AWS Textract and custom scoring.
-
----
-
-Built with ❤️ for Ethiopia’s professionals. Plug in your credentials, deploy to your preferred AWS stack, and iterate confidently.
+Tests use **Vitest** for services and APIs and **Playwright** for end-to-end flows. Local setup, environment variables, and deployment notes are in [QUICK_START.md](QUICK_START.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).

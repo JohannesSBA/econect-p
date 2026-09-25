@@ -12,8 +12,6 @@ export async function getCurrentUser() {
   const session = await getServerSession(authOptions)
   if (!session?.user) return null
 
-  console.log("session", session)
-  
   // Use email as identifier since ID isn't present in session type
   const userEmail = session.user.email
   

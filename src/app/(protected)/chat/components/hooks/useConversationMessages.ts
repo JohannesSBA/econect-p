@@ -5,16 +5,19 @@ import { toast } from "sonner";
 import { socketManager } from "@/lib/socket";
 import { Message } from "@/types/message";
 
-type MessagesResponse = { messages?: Message[]; hasMore?: boolean } | Message[];
+type MessagesResponse =
+  | { messages?: Message[]; hasMore?: boolean; nextCursor?: string | null }
+  | Message[];
 
 const normalizePayload = (data: MessagesResponse) => {
   if (Array.isArray(data)) {
-    return { messages: data, hasMore: false };
+    return { messages: data, hasMore: false, nextCursor: null };
   }
 
   return {
     messages: data.messages ?? [],
     hasMore: Boolean(data.hasMore),
+    nextCursor: data.nextCursor ?? null,
   };
 };
 
@@ -47,6 +50,7 @@ export function useConversationMessages({
   const [loading, setLoading] = useState<boolean>(true);
   const [loadingMore, setLoadingMore] = useState<boolean>(false);
   const [hasMore, setHasMore] = useState<boolean>(true);
+  const cursorRef = useRef<string | null>(null);
 
   const listRef = useRef<HTMLDivElement | null>(null);
   const scrollAnchorRef = useRef<HTMLDivElement | null>(null);
@@ -70,6 +74,8 @@ export function useConversationMessages({
 
       setMessages(sortedMessages);
       setHasMore(payload.hasMore);
+      cursorRef.current =
+        payload.nextCursor ?? sortedMessages.at(0)?.id ?? null;
 
       const initialReadStatus: Record<string, boolean> = {};
       sortedMessages.forEach((message) => {
@@ -92,7 +98,7 @@ export function useConversationMessages({
     isPrependingRef.current = true;
 
     const topBefore = messages[0];
-    const topId = topBefore?.id;
+    const topId = topBefore?.id ?? cursorRef.current;
     const container = listRef.current;
     const prevScrollHeight = container?.scrollHeight || 0;
     const prevScrollTop = container?.scrollTop || 0;
@@ -102,7 +108,7 @@ export function useConversationMessages({
         chatPartner,
         chatId,
         limit: 15,
-        before: topBefore?.createdAt,
+        cursor: topId,
       });
 
       const payload = normalizePayload(response.data as MessagesResponse);
@@ -111,6 +117,8 @@ export function useConversationMessages({
       if (olderMessages.length > 0) {
         setMessages((prev) => [...olderMessages, ...prev]);
         setHasMore(payload.hasMore);
+        cursorRef.current =
+          payload.nextCursor ?? olderMessages.at(0)?.id ?? topId ?? null;
 
         setUserReadStatus((prev) => {
           const next = { ...prev };

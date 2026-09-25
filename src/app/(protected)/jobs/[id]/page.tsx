@@ -20,8 +20,9 @@ import { getCurrentUser } from "@/lib/getCurrentUser";
 import { User } from "@/../types/prisma";
 import prisma from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import JobApplicationForm from "./components/JobApplicationForm";
+import { JobApplicationForm } from "@/features/jobs";
 import { getCompanyLogoUrl } from "@/lib/image-utils";
+import { publishedJobWhere } from "@/lib/jobFilters";
 
 export default async function JobPage({
   params,
@@ -51,8 +52,8 @@ export default async function JobPage({
   }
 
   // Fetch job listing with all related data
-  const job = await prisma.jobListing.findUnique({
-    where: { id },
+  const job = await prisma.jobListing.findFirst({
+    where: { id, ...publishedJobWhere },
     include: {
       employer: {
         select: {
